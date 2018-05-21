@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.1
+// @version      2.0.0.2
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -14,9 +14,9 @@
 (function() {
     'use strict';
 
-	alert('start');
     
     var _ws = unsafeWindow.WebSocket, ws, ws_on_message;
+	alert(_ws);
 	var message_listeners = [];
 	var listener_seq = 0;
 	function add_listener(types, fn) {
