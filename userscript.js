@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.3
+// @version      2.0.0.4
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
-// @match        http://*
+// @match        http://game.wsmud.com/*
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -14,8 +14,7 @@
 (function() {
     'use strict';
 
-    
-    var _ws = unsafeWindow.WebSocket, ws, ws_on_message;
+    var _ws = window.WebSocket, ws, ws_on_message;
 	alert(_ws);
 	var message_listeners = [];
 	var listener_seq = 0;
