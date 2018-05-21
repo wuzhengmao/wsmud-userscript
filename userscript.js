@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.2
+// @version      2.0.0.3
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
-// @match        http://game.wsmud.com/*
+// @match        http://*
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_addStyle
