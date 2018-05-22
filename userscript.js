@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0
+// @version      2.0.0.10
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -215,7 +215,7 @@
 					   'enable unarmed liumaishenjian;lianxi liumaishenjian', 'lianxi tagexing',
 					   'lianxi hengshanwushenjian', 'lianxi feixingshu', 'lianxi wuhuduanmendao',
 	                   'lianxi lingshezhangfa', 'lianxi yunlongbian', 'lianxi baguagun'];
-	var task_path = 'fly hs;wu;n;n', task_npc = '岳不群', auto_wudao_max = '五十';
+	var task_path = 'fly hs', task_npc = '高根明', auto_wudao_max = '六十';
 	function check_buff() {
 		var pfms = [];
 		if (!my_buffs.has('force')) {
@@ -343,9 +343,11 @@
 				}, data.rtime);
 			}
 			if (data.id && data.distime) {
+                console.log('cd+ ' + data.id);
 				cooldowns.set(data.id, true);
 				var _id = data.id;
 				setTimeout(function() {
+                    console.log('cd- ' + _id);
 					cooldowns.set(_id, false);
 				}, data.distime);
 			}
