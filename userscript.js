@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.10
+// @version      2.0.0.11
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -10,6 +10,7 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // ==/UserScript==
+// v2.0.0.11 2018.5.22 修正无法正确自动打boss的BUG
 
 (function() {
     'use strict';
@@ -654,7 +655,7 @@
 				boss_btn.addClass('hide-tool');
 				var boss_target, action = 0, paths, index, boss_id, kill_time;
 				boss_trigger = add_listener(['combat', 'dispfm', 'status', 'die', 'dialog', 'text', 'msg'], function(data) {
-					if (data.type == 'msg' && (map_id == 'home' || map_id == 'yz') && data.ch == 'sys') {
+					if (data.type == 'msg' && (map_id == 'home' || map_id == 'yz') && data.ch == 'rumor') {
 						var r = data.content.match(/^听说(.+)出现在(.+)-(.+)一带。$/);
 						if (r) {
 							log('boss: ' + r[1] + ' at ' + r[2] + '-' + r[3]);
