@@ -1,18 +1,22 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.0
+// @version      1.0.0.1
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
 // @match        http://sword-direct1.yytou.cn/*
+// @match        http://sword-server1.yytou.cn/*
+// @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
+// @grant        unsafeWindow
 // ==/UserScript==
 
-(function() {
+(function(window) {
     'use strict';
     
-	if (!window.gSocketMsg || !window.gSocketMsg2 || window.mingy_addon) {
+    setTimeout(function() {
+	if (!window.gSocketMsg || !window.gSocketMsg2) {
 		return;
 	}
 	if (!window.g_obj_map.get('msg_attrs')) {
@@ -721,7 +725,7 @@
 	var kill = function() {
 		var npc = null;
 		$('#out > span.out button.cmd_click2').each(function() {
-			$e = $(this);
+			var $e = $(this);
 			if ($e.text() == '杀死') {
 				var onclick = $e.attr('onclick');
 				var i = onclick.indexOf('\'');
@@ -1791,6 +1795,6 @@
 			}
 		}
 	};
-	window.mingy_addon = 1;
 	notify_fail('addon loaded');
-})();
+    }, 1000);
+})(unsafeWindow);
