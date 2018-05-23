@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.11
+// @version      2.0.0.12
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -11,6 +11,7 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 // v2.0.0.11 2018.5.22 修正无法正确自动打boss的BUG
+// v2.0.0.12 2018.5.24 删除迁移遗漏的代码
 
 (function() {
     'use strict';
@@ -1751,43 +1752,6 @@
 			}
 		}
 	}); */
-	function find_path(map_name, room_name) {
-		var paths = [];
-		for (var i = 0; i < window.full_map.length; i++) {
-			var map = window.full_map[i];
-			if (map.name == map_name) {
-				for (var j = 0; j < map.rooms.length; j++) {
-					var room = map.rooms[j];
-					if (room.name == room_name) {
-						for (var k = 0; k < room.path.length; k++) {
-							if (k == 0) {
-								var path = 'fly ' + map.id;
-								if (room.path[k]) {
-									path += ';' + room.path[k];
-								}
-								paths.push(path);
-							} else {
-								paths.push(room.path[k]);
-							}
-						}
-						break;
-					}
-				}
-			}
-		}
-		return paths;
-	}
-	function find_task_items(item) {
-		for (var i = 0; i < window.task_items.length; i++) {
-			var data = window.task_items[i];
-			for (var j = 0; j < data.items.length; j++) {
-				if (data.items[j] == item) {
-					return data;
-				}
-			}
-		}
-		return null;
-	}
 	
 	function process_cmdline(line) {
 		var pc = '';
