@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.2
+// @version      1.0.0.3
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -12,6 +12,7 @@
 // @grant        unsafeWindow
 // ==/UserScript==
 // V1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
+// V1.0.0.3 2018.5.24 增加手机长按显示命令行的功能
 
 (function(window) {
     'use strict';
@@ -1760,6 +1761,19 @@
 		cmdline.detach();
 		sendCommand();
 	});
+	function createCmdline() {
+		$('body').append(cmdline);
+		cmdline.css('top', ($('#page').height() - 60) + 'px');
+		if (history_cmds.length > 0) {
+			select_index = history_cmds.length - 1;
+			cmdbox.val(history_cmds[select_index]);
+			cmdbox.select();
+			cmdbox.focus();
+		} else {
+			cmdbox.val('');
+			cmdbox.focus();
+		}
+	}
 	function sendCommand() {
 		var cmd = $.trim(cmdbox.val());
 		if (cmd == '') {
@@ -1828,17 +1842,7 @@
 					if ($e.length > 0 && document.activeElement == $e[0]) {
 						return true;
 					}
-					$('body').append(cmdline);
-					cmdline.css('top', ($('#page').height() - 60) + 'px');
-					if (history_cmds.length > 0) {
-						select_index = history_cmds.length - 1;
-						cmdbox.val(history_cmds[select_index]);
-						cmdbox.select();
-						cmdbox.focus();
-					} else {
-						cmdbox.val('');
-						cmdbox.focus();
-					}
+					createCmdline();
 					e.preventDefault();
 				} else if (e.which == 112) { // F1
 					perform();
@@ -1846,6 +1850,28 @@
 				}
 				return true;
 			});
+	var h_long_press_timeout;
+	$(document).on({
+		touchstart: function() {
+			h_long_press_timeout = setTimeout(function() {
+				createCmdline();
+				h_long_press_timeout = undefined;
+			}, 1000);
+		},
+		touchmove: function() {
+			if (h_long_press_timeout) {
+				clearTimeout(h_long_press_timeout); 
+				h_long_press_timeout = undefined;
+			}
+		},
+		touchend: function() {
+			if (h_long_press_timeout) {
+				clearTimeout(h_long_press_timeout); 
+				h_long_press_timeout = undefined;
+			}
+		}
+	});
+
 	var qixia_id_pattern = /^(langfuyu|wangrong|pangtong|liyufei|bujinghong|fengxingzhui|guoji|wuzhen|fengnan|huoyunxieshen|niwufeng|hucangyan|huzhu|xuanyueyan|langjuxu|liejiuzhou|mumiaoyu|yuwenwudi|lixuanba|babulongjiang|fengwuhen|licangruo|xiaqing|miaowuxin|wuyeju)_/;
 	var _show_npc = window.gSocketMsg2.show_npc;
 	window.gSocketMsg2.show_npc = function() {
