@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.1
+// @version      1.0.0.2
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -11,6 +11,7 @@
 // @run-at       document-idle
 // @grant        unsafeWindow
 // ==/UserScript==
+// V1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
 
 (function(window) {
     'use strict';
@@ -30,6 +31,7 @@
 	var user_id_pattern1 = /^u[0-9]+$/;
 	var user_id_pattern2 = /^u[0-9]+\-/;
 	var kuafu_name_pattern = /^\[[0-9]+\]/;
+	var kuafu = '[1-5区]';
 	var skills = new Map();
 	skills.put('九天龙吟剑法', [ '排云掌法', '雪饮狂刀', '千影百伤棍', '燎原百破' ]);
 	skills.put('覆雨剑法', [ '翻云刀法', '如来神掌', '昊云破周斧', '拈花解语鞭' ]);
@@ -196,6 +198,46 @@
 	map_ids.put('ts2', '39');
 	map_ids.put('miaojiang', '40');
 	map_ids.put('mj3', '40');
+	map_ids.put('雪亭镇', '1');
+	map_ids.put('洛阳', '2');
+	map_ids.put('华山村', '3');
+	map_ids.put('华山', '4');
+	map_ids.put('扬州', '5');
+	map_ids.put('丐帮', '6');
+	map_ids.put('乔阴县', '7');
+	map_ids.put('峨眉山', '8');
+	map_ids.put('恒山', '9');
+	map_ids.put('武当山', '10');
+	map_ids.put('晚月庄', '11');
+	map_ids.put('水烟阁', '12');
+	map_ids.put('少林寺', '13');
+	map_ids.put('唐门', '14');
+	map_ids.put('青城山', '15');
+	map_ids.put('逍遥林', '16');
+	map_ids.put('开封', '17');
+	map_ids.put('光明顶', '18');
+	map_ids.put('全真教', '19');
+	map_ids.put('古墓', '20');
+	map_ids.put('白驼山', '21');
+	map_ids.put('嵩山', '22');
+	map_ids.put('寒梅庄', '23');
+	map_ids.put('泰山', '24');
+	map_ids.put('大旗门', '25');
+	map_ids.put('大昭寺', '26');
+	map_ids.put('魔教', '27');
+	map_ids.put('星宿海', '28');
+	map_ids.put('茅山', '29');
+	map_ids.put('桃花岛', '30');
+	map_ids.put('铁雪山庄', '31');
+	map_ids.put('慕容山庄', '32');
+	map_ids.put('大理', '33');
+	map_ids.put('断剑山庄', '34');
+	map_ids.put('冰火岛', '35');
+	map_ids.put('侠客岛', '36');
+	map_ids.put('绝情谷', '37');
+	map_ids.put('碧海山庄', '38');
+	map_ids.put('天山', '39');
+	map_ids.put('苗疆', '40');
 	var secrets = new Map();
 	secrets.put("lvshuige", 1255);
 	secrets.put("daojiangu", 1535);
@@ -841,7 +883,7 @@
 		}
 		return null;
 	}
-	var task_h_timer, task_h_listener, pintu_trigger;
+	var task_h_timer, task_h_listener, pintu_trigger, taofan_trigger;
 	function stop_task() {
 		if (task_h_timer) {
 			clearInterval(task_h_timer);
@@ -1299,6 +1341,52 @@
 			console.log('pintu trigger closed');
 			remove_listener(pintu_trigger);
 			pintu_trigger = undefined;
+		} else if ((cmd == '#t+ taofan' || cmd == '#t+ taofan 1' || cmd == '#t+ taofan 2') && !taofan_trigger) {
+			console.log('open taofan trigger...');
+			var taofan_target = kuafu + (cmd == '#t+ taofan 2' ? '段老大' : '无一'), taofan_id, taofan_start = false;
+			taofan_trigger = add_listener(['channel', 'main_msg', 'jh'], '',
+					function(msg) {
+						if (!taofan_start && msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
+							if (removeSGR(msg.get('msg')).indexOf('【系统】' + kuafu + '段老大慌不择路，逃往了') >= 0) {
+								var r = msg.get('msg').match(/find_qinglong_road\s+(\d+)/);
+								if (r) {
+                                    console.log(new Date().getTime() + ' ' + r[0]);
+                                    clickButton(r[0]);
+                                    taofan_start = true;
+								}
+							}
+						} else if (taofan_start && !taofan_id && msg.get('type') == 'jh') {
+							if (msg.get('subtype') == 'info') {
+								for (var i = 1; ; i++) {
+									var npc = msg.get('npc' + i);
+									if (!npc) {
+										break;
+									} else {
+										var s = npc.split(',');
+										if (s.length > 1 && removeSGR(s[1]) == taofan_target) {
+											taofan_id = s[0];
+											console.log(new Date().getTime() + ' find taofan ' + taofan_id);
+											break;
+										}
+									}
+								}
+							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == taofan_target) {
+								taofan_id = msg.get('id');
+								clickButton('kill ' + taofan_id);
+							}
+						} else if (taofan_start && taofan_id && msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+							if (removeSGR(msg.get('msg')).indexOf(kuafu + '无一对著' + kuafu + '段老大喝道：「臭贼！今日不是你死就是我活！」') >= 0) {
+								console.log(new Date().getTime() + ' kill ' + taofan_id);
+								clickButton('kill ' + taofan_id);
+								taofan_id = undefined;
+								taofan_start = false;
+							}
+						}
+					});
+		} else if (cmd == '#t- taofan' && taofan_trigger) {
+			console.log('taofan trigger closed');
+			remove_listener(taofan_trigger);
+			taofan_trigger = undefined;
 		} else if (cmd.substr(0, 7) == '#alias ') {
 			var alias = $.trim(cmd.substr(7));
 			var key, value, i = alias.indexOf(' ');
