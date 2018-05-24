@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.4
+// @version      1.0.0.5
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -11,8 +11,9 @@
 // @run-at       document-idle
 // @grant        unsafeWindow
 // ==/UserScript==
-// V1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
-// V1.0.0.4 2018.5.24 增加手机长按打开命令行的功能
+// v1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
+// v1.0.0.4 2018.5.24 增加手机长按打开命令行的功能
+// v1.0.0.5 2018.5.24 修复在部分房间首次登入方向指令错误的BUG
 
 (function(window) {
     'use strict';
@@ -1664,16 +1665,15 @@
 				|| args[0] == 'southwest' || args[0] == 'northeast'
 				|| args[0] == 'northwest' || args[0] == 'up'
 				|| args[0] == 'down') {
+			args[1] = args[0];
+			args[0] = 'go';
 			var room = window.g_obj_map.get('msg_room');
 			if (room) {
 				var random = room.get('go_random');
 				if (random) {
-					args[1] = args[0] + '.' + random;
-				} else {
-					args[1] = args[0];
+					args[1] += '.' + random;
 				}
 			}
-			args[0] = 'go';
 		} else if (args[0] == 'fly') {
 			args[0] = 'jh';
 			var id = map_ids.get(args[1]);
