@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.3
+// @version      1.0.0.4
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -12,7 +12,7 @@
 // @grant        unsafeWindow
 // ==/UserScript==
 // V1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
-// V1.0.0.3 2018.5.24 增加手机长按显示命令行的功能
+// V1.0.0.4 2018.5.24 增加手机长按打开命令行的功能
 
 (function(window) {
     'use strict';
@@ -1761,6 +1761,11 @@
 		cmdline.detach();
 		sendCommand();
 	});
+	$(window).resize(function() {
+		if (cmdline.parent().is('body')) {
+			cmdline.css('top', ($('#page').height() - 60) + 'px');
+		}
+	});
 	function createCmdline() {
 		$('body').append(cmdline);
 		cmdline.css('top', ($('#page').height() - 60) + 'px');
@@ -1854,8 +1859,12 @@
 	$(document).on({
 		touchstart: function() {
 			h_long_press_timeout = setTimeout(function() {
-				createCmdline();
 				h_long_press_timeout = undefined;
+				if (!cmdline.parent().is('body')) {
+					createCmdline();
+				} else {
+					cmdline.detach();
+				}
 			}, 1000);
 		},
 		touchmove: function() {
