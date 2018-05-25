@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.5
+// @version      1.0.0.6
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -14,6 +14,7 @@
 // v1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
 // v1.0.0.4 2018.5.24 增加手机长按打开命令行的功能
 // v1.0.0.5 2018.5.24 修复在部分房间首次登入方向指令错误的BUG
+// v1.0.0.6 2018.5.25 F1对于没有阵法的江湖绝学也能一起释放
 
 (function(window) {
     'use strict';
@@ -705,28 +706,31 @@
 		return buttons;
 	}
 	function select_perform(buttons, no_combo) {
-		if (!no_combo) {
-			for ( var i = 0; i < buttons.length; i++) {
-				if (buttons[i]) {
-					var pfms = skills.get(buttons[i]);
-					if (pfms) {
-						for ( var j = i + 1; j < buttons.length; j++) {
-							if (buttons[j] && pfms.indexOf(buttons[j]) >= 0) {
-								clickButton('playskill ' + (i + 1) + '\nplayskill '
-										+ (j + 1));
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-		for ( var i = 0; i < buttons.length; i++) {
-			if (buttons[i] && skills.containsKey(buttons[i])) {
-				clickButton('playskill ' + (i + 1));
-				return true;
-			}
-		}
+        for ( var i = 0; i < buttons.length; i++) {
+            if (buttons[i]) {
+                var pfms = skills.get(buttons[i]);
+                if (pfms) {
+                    if (no_combo) {
+                        clickButton('playskill ' + (i + 1));
+                        return true;
+                    }
+                    for ( var j = i + 1; j < buttons.length; j++) {
+                        if (buttons[j] && pfms.indexOf(buttons[j]) >= 0) {
+                            clickButton('playskill ' + (i + 1) + '\nplayskill '
+                                        + (j + 1));
+                            return true;
+                        }
+                    }
+                    for ( var j = i + 1; j < buttons.length; j++) {
+                        if (buttons[j] && skills.containsKey(buttons[j])) {
+                            clickButton('playskill ' + (i + 1) + '\nplayskill '
+                                        + (j + 1));
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
 		return false;
 	}
 	function do_perform(buttons, performs) {
