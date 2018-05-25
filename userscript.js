@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.12
+// @version      2.0.0.13
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -12,6 +12,7 @@
 // ==/UserScript==
 // v2.0.0.11 2018.5.22 修正无法正确自动打boss的BUG
 // v2.0.0.12 2018.5.24 删除迁移遗漏的代码
+// v2.0.0.13 2018.5.25 练习列表中增加明玉功
 
 (function() {
     'use strict';
@@ -213,7 +214,8 @@
 	aliases.set('wakuang', 'stopstate;jh fam 0 start;go west;go west;go west;go west;eq qpei172983d;wa');
 	var full_skills = ['lianxi force', 'lianxi sword', 'lianxi unarmed', 'lianxi dodge', 'lianxi parry',
 	                   'lianxi throwing', 'lianxi blade', 'lianxi staff', 'lianxi whip', 'lianxi club',
-	                   'lianxi zixiashengong2', 'lianxi dugujiujian2', 'enable unarmed dasongyangshenzhang;lianxi dasongyangshenzhang',
+	                   'enable force mingyugong;lianxi mingyugong', 'enable force zixiashengong2;lianxi zixiashengong2',
+					   'lianxi dugujiujian2', 'enable unarmed dasongyangshenzhang;lianxi dasongyangshenzhang',
 					   'enable unarmed liumaishenjian;lianxi liumaishenjian', 'lianxi tagexing',
 					   'lianxi hengshanwushenjian', 'lianxi feixingshu', 'lianxi wuhuduanmendao',
 	                   'lianxi lingshezhangfa', 'lianxi yunlongbian', 'lianxi baguagun'];
