@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         wsmud
 // @namespace    http://mingy.org/
-// @version      2.0.0.13
+// @version      2.0.0.14
 // @description  wsmud extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/userscript.js
 // @author       Mingy
@@ -13,6 +13,7 @@
 // v2.0.0.11 2018.5.22 修正无法正确自动打boss的BUG
 // v2.0.0.12 2018.5.24 删除迁移遗漏的代码
 // v2.0.0.13 2018.5.25 练习列表中增加明玉功
+// v2.0.0.14 2018.5.29 练习列表的格式改回来了，#combat增加了pfm_ok的判断，增加了8:00pm抢完成师门任务的功能
 
 (function() {
     'use strict';
@@ -36,6 +37,15 @@
 			}
 		}
 	}
+    function fire_listener(data) {
+		for ( var i = 0; i < message_listeners.length; i++) {
+			var listener = message_listeners[i];
+			if (listener.types == data.type || (listener.types instanceof Array && $
+							.inArray(data.type, listener.types) >= 0)) {
+				listener.fn(data);
+			}
+		}
+    }
 	var my_receive_message = function(evt) {
 		ws_on_message.apply(this, arguments);
         if (!evt || !evt.data) return;
@@ -46,13 +56,7 @@
         } else {
             data = {type : 'text', msg : evt.data};
         }
-		for ( var i = 0; i < message_listeners.length; i++) {
-			var listener = message_listeners[i];
-			if (listener.types == data.type || (listener.types instanceof Array && $
-							.inArray(data.type, listener.types) >= 0)) {
-				listener.fn(data);
-			}
-		}
+        fire_listener(data);
 	};
 
 	var echo = false;
@@ -212,14 +216,12 @@
 	aliases.set('set_auto_pfm', 'chat ;setting auto_pfm force.xi,dodge.power,sword.wu,parry.wu,sword.poqi,unarmed.liu,throwing.jiang');
 	aliases.set('no_auto_pfm', 'chat ;setting auto_pfm');
 	aliases.set('wakuang', 'stopstate;jh fam 0 start;go west;go west;go west;go west;eq qpei172983d;wa');
-	var full_skills = ['lianxi force', 'lianxi sword', 'lianxi unarmed', 'lianxi dodge', 'lianxi parry',
-	                   'lianxi throwing', 'lianxi blade', 'lianxi staff', 'lianxi whip', 'lianxi club',
-	                   'enable force mingyugong;lianxi mingyugong', 'enable force zixiashengong2;lianxi zixiashengong2',
-					   'lianxi dugujiujian2', 'enable unarmed dasongyangshenzhang;lianxi dasongyangshenzhang',
-					   'enable unarmed liumaishenjian;lianxi liumaishenjian', 'lianxi tagexing',
-					   'lianxi hengshanwushenjian', 'lianxi feixingshu', 'lianxi wuhuduanmendao',
-	                   'lianxi lingshezhangfa', 'lianxi yunlongbian', 'lianxi baguagun'];
-	var task_path = 'fly hs', task_npc = '高根明', auto_wudao_max = '六十';
+	aliases.set('wang', 'enable force mingyugong;perform force.wang;enable force zixiashengong2');
+	var full_skills = ['force', 'sword', 'unarmed', 'dodge', 'parry', 'throwing', 'blade', 'staff', 'whip', 'club',
+	                   'zixiashengong2', 'mingyugong', 'dugujiujian2', 'liumaishenjian', 'dasongyangshenzhang',
+                       'tagexing', 'hengshanwushenjian', 'feixingshu', 'wuhuduanmendao', 'lingshezhangfa',
+                       'yunlongbian', 'baguagun'];
+	var task_path = 'fly hs', task_npc = '高根明', auto_wudao_max = '六十', auto_finish_party = 'jh fam 3 start;task sm qwhf235d039 give 0q1k234d4c6';
 	function check_buff() {
 		var pfms = [];
 		if (!my_buffs.has('force')) {
@@ -353,6 +355,7 @@
 				setTimeout(function() {
                     console.log('cd- ' + _id);
 					cooldowns.set(_id, false);
+                    fire_listener({type: 'pfm_ok', id: _id});
 				}, data.distime);
 			}
 		} else if (data.type == 'status') {
@@ -1107,7 +1110,7 @@
 					if (data.msg.match(/^也许是缺乏实战经验，你觉得你的.+已经到了瓶颈了。$/)
 							|| data.msg == '你的基本功火候未到，必须先打好基础才能继续提高。') {
 						if (++lian_index < full_skills.length) {
-							send_cmd('stopstate;' + full_skills[lian_index]);
+							send_cmd('stopstate;lianxi ' + full_skills[lian_index]);
 						} else {
 							execute_cmd('#t- lian');
 							setTimeout(function() {
@@ -1117,7 +1120,7 @@
 					} else if (data.msg == '你必须找把刀才能学五虎断门刀。') {
 						execute_cmd('eq_blade');
 						setTimeout(function() {
-							send_cmd(full_skills[lian_index]);
+							send_cmd('lianxi ' + full_skills[lian_index]);
 						}, 3000);
 					} else if (data.msg == '你的潜能不够，无法继续练习下去了。') {
 						execute_cmd('#t- lian');
@@ -1128,7 +1131,7 @@
 						var r = data.msg.match(/^<hig>你获得了(\d+)点经验，(\d+)点潜能。<\/hig>$/);
 						if (r) {
 							if (parseInt(r[1]) < 80) {
-								send_cmd('stopstate;go east;go east;go north;go enter;go west;' + full_skills[lian_index]);
+								send_cmd('stopstate;go east;go east;go north;go enter;go west;lianxi ' + full_skills[lian_index]);
 							}
 						}
 					}
@@ -1351,17 +1354,31 @@
 				}
 			});
 			send_cmd('store;pack');
+        } else if (cmd == '#auto_finish_party') {
+            log('open auto finish party...');
+			add_task_listener('msg', function(data) {
+                if (data.ch == 'sys' && data.content.indexOf('排行榜奖励发放完毕，进入社交系统消息中收取。') >= 0) {
+                    console.log(data);
+                    send_cmd('stopstate;' + auto_finish_party);
+                    todo('wakuang');
+                    execute_cmd('#stop');
+                }
+			});
 		} else if (cmd == '#combat') {
 			log('open auto combat...');
 			combat_btn.addClass('hide-tool');
-			add_task_listener(['combat', 'status'], function(data) {
+			add_task_listener(['combat', 'status', 'pfm_ok'], function(data) {
 				if (data.type == 'combat' && data.start) {
 					check_buff();
 					perform_busy();
+                    perform_attack();
 				} else if (in_combat && data.type == 'status' && data.id == my_id && data.action == 'remove') {
 					check_buff();
 				} else if (in_combat && data.type == 'status' && data.id != my_id && data.action == 'remove') {
 					perform_busy(data.id);
+				} else if (in_combat && data.type == 'pfm_ok') {
+					check_buff();
+                    perform_attack();
 				}
 			});
 		} else if (cmd == '#combat 1') {
@@ -2491,6 +2508,7 @@
                 '<HIZ>黑龙鱼</HIZ>',
                 '<HIZ>银龙鱼</HIZ>',
                 '<hio>七星刀鱼</hio>',
+                '<hio>巨骨舌鱼</hio>',
             ],
             type: 'give',
             sub_type: 'fish',
