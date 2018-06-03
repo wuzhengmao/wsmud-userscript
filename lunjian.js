@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.6
+// @version      1.0.0.7
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -10,11 +10,13 @@
 // @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
 // @grant        unsafeWindow
+// @grant        GM_addStyle
 // ==/UserScript==
-// v1.0.0.2 2018.5.24 增加逃犯的触发器#t+ taofan
-// v1.0.0.4 2018.5.24 增加手机长按打开命令行的功能
-// v1.0.0.5 2018.5.24 修复在部分房间首次登入方向指令错误的BUG
-// v1.0.0.6 2018.5.25 F1对于没有阵法的江湖绝学也能一起释放
+// v1.0.0.2 2018.05.24 增加逃犯的触发器#t+ taofan
+// v1.0.0.4 2018.05.24 增加手机长按打开命令行的功能
+// v1.0.0.5 2018.05.24 修复在部分房间首次登入方向指令错误的BUG
+// v1.0.0.6 2018.05.25 F1对于没有阵法的江湖绝学也能一起释放
+// v1.0.0.7 2018.06.03 增加了双击锁定攻击目标的功能
 
 (function(window) {
     'use strict';
@@ -329,18 +331,53 @@
 		}
 		return _make_cmd.apply(this, arguments);
 	};
-	var vs_text1 = '', vs_text2 = '', defence_performed = false;
+	var vs_text = '', defence_performed = false, attack_targets = [];
 	add_listener(
 			'vs',
 			'',
 			function(msg) {
-				if (!show_target && !auto_attack && !auto_defence) {
+				if (!show_target && !auto_attack && !auto_defence && attack_targets.length == 0) {
 					return;
 				}
 				var subtype = msg.get('subtype');
-				if (subtype == 'text') {
-					vs_text1 = vs_text2;
-					vs_text2 = msg.get('msg');
+				if (subtype == 'vs_info') {
+                    $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').each(function() {
+                        var $e = $(this);
+                        if ($e.children().length == 0) {
+                            $e.removeClass('attack_target');
+                            var i = attack_targets.indexOf($e.attr('id'));
+                            if (i >= 0) {
+                                attack_targets.splice(i, 1);
+                            }
+                        }
+                    });
+                } else if (subtype == 'die') {
+                    var vid = msg.get('vid');
+					var vs_info = window.g_obj_map.get('msg_vs_info');
+                    var $e;
+                    for (var i = 1; i <= 8; i++) {
+                        if (vs_info.get('vs1_pos_v' + i) == vid) {
+                            $e =  $('.out_top td#vs1' + i);
+                            break;
+                        }
+                    }
+                    if (!$e) {
+                        for (var i = 1; i <= 8; i++) {
+                            if (vs_info.get('vs2_pos_v' + i) == vid) {
+                                 $e =  $('.out_top td#vs2' + i);
+                                break;
+                            }
+                        }
+                    }
+                    if ($e) {
+                        $e.removeClass('attack_target');
+                        var i = attack_targets.indexOf($e.attr('id'));
+                        if (i >= 0) {
+                            attack_targets.splice(i, 1);
+                        }
+                    }
+                } else if (subtype == 'text') {
+					vs_text += msg.get('msg');
 				} else if (subtype == 'add_xdz') {
 					var my_id = window.g_obj_map.get('msg_attrs').get('id');
 					if (msg.get('uid') == my_id) {
@@ -350,9 +387,6 @@
 					var my_id = window.g_obj_map.get('msg_attrs').get('id');
 					var vs_info = window.g_obj_map.get('msg_vs_info');
 					var pfm = removeSGR(msg.get('name'));
-					var vs_text = skill_chains.indexOf(pfm) >= 0 ? vs_text1
-							+ vs_text2
-							: vs_text2;
 					if (!is_defence(vs_text)) {
 						if (msg.get('uid') == my_id) {
 							var vid = msg.get('vid');
@@ -389,53 +423,80 @@
 												&& get_friend_index(id) < 0) {
 											auto_pfm(vs_info, pfm, v1, p1,
 													v2, p2);
+										} else if (attack_targets.indexOf(v2 + i) >= 0) {
+                                            console.log('match target');
+											var xdz = parseInt(vs_info.get(v1 + '_xdz' + p1));
+                                            select_perform(get_skill_buttons(xdz));
 										}
 										break;
 									}
 								}
 							}
-						} else if (is_player(msg.get('uid'))) {
+						} else {
 							var pos1 = check_pos(vs_info, my_id);
 							if (pos1) {
 								var pos2 = check_pos(vs_info, msg.get('uid'));
 								if (pos2 && pos1[0] != pos2[0]) {
-									var target = 0;
-									for ( var i = 1; i <= 8; i++) {
-										if (i == pos1[1]) {
-											continue;
-										}
-										if (is_attack_target(vs_info, my_id, [pos1[0], i], pfm, vs_text)) {
-											target = i;
-											break;
-										}
-									}
-									if (target == 0 && vs_text.indexOf('你') >= 0) {
-										if (show_target) {
-											notify_fail(HIG + 'DEFENCE: '
-													+ vs_info.get(pos2[0] + '_name' + pos2[1]));
-										}
-										if (auto_defence && !defence_performed && has_npc(vs_info, pos1[0]) && has_npc(vs_info, pos2[0])) {
-											var max_kee1 = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
-											var max_kee2 = parseInt(vs_info.get(pos2[0] + '_max_kee' + pos2[1]));
-											if (max_kee2 > max_kee1 * 0.8) {
-												var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
-												var buttons = get_skill_buttons(xdz);
-												for ( var i = 0; i < dodge_skills.length; i++) {
-													var k = $.inArray(dodge_skills[i], buttons);
-													if (k >= 0) {
-														clickButton('playskill ' + (k + 1));
-														defence_performed = true;
-														break;
-													}
-												}
-											}
-										}
-									}
-								}
+                                    if (is_player(msg.get('uid'))) {
+                                        var target = 0;
+                                        for ( var i = 1; i <= 8; i++) {
+                                            if (i == pos1[1]) {
+                                                continue;
+                                            }
+                                            if (is_attack_target(vs_info, my_id, [pos1[0], i], pfm, vs_text)) {
+                                                target = i;
+                                                break;
+                                            }
+                                        }
+                                        if (target == 0 && vs_text.indexOf('你') >= 0) {
+                                            if (show_target) {
+                                                notify_fail(HIG + 'DEFENCE: '
+                                                            + vs_info.get(pos2[0] + '_name' + pos2[1]));
+                                            }
+                                            if (auto_defence && !defence_performed && has_npc(vs_info, pos1[0]) && has_npc(vs_info, pos2[0])) {
+                                                var max_kee1 = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
+                                                var max_kee2 = parseInt(vs_info.get(pos2[0] + '_max_kee' + pos2[1]));
+                                                if (max_kee2 > max_kee1 * 0.8) {
+                                                    var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
+                                                    var buttons = get_skill_buttons(xdz);
+                                                    for ( var i = 0; i < dodge_skills.length; i++) {
+                                                        var k = $.inArray(dodge_skills[i], buttons);
+                                                        if (k >= 0) {
+                                                            clickButton('playskill ' + (k + 1));
+                                                            defence_performed = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (attack_targets.indexOf(pos2[0] + pos2[1]) >= 0) {
+                                        console.log('match target');
+                                        var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
+                                        select_perform(get_skill_buttons(xdz));
+                                    }
+                                } else if (pos2) {
+                                    for (var i = 0; i < attack_targets.length; i++) {
+                                        var uid = vs_info.get(attack_targets[i].substring(0, 3) + '_pos' + attack_targets[i].substring(3));
+                                        var name = vs_info.get(attack_targets[i].substring(0, 3) + '_name' + attack_targets[i].substring(3));
+                                        if (!is_player(uid) && vs_text.indexOf(name) >= 0) {
+                                            console.log('match target');
+                                            var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
+                                            select_perform(get_skill_buttons(xdz));
+                                        }
+                                    }
+                                }
 							}
-						}
+                        }
 					}
-				}
+                    vs_text = '';
+				} else if (subtype == 'attack' && msg.get('aid') != 0) {
+					vs_text = '';
+				} else if (msg.get('subtype') == 'combat_result') {
+                    vs_text = '';
+                    attack_targets = [];
+                }
 			});
 	function is_defence(vs_text) {
 		for ( var i = 0; i < defence_patterns.length; i++) {
@@ -1884,6 +1945,53 @@
 			}
 		}
 	});
+
+    GM_addStyle('.attack_target {border: 1px solid red;}');
+    function enhance_combat() {
+        $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').dblclick(function() {
+            var vs_info = g_obj_map.get('msg_vs_info');
+            if (!vs_info || vs_info.get('is_watcher')) {
+                return;
+            }
+            var $e = $(this);
+            var id = $e.attr('id');
+            if ($e.hasClass('attack_target')) {
+                console.log('remove target ' + id);
+                $e.removeClass('attack_target');
+                attack_targets.splice(attack_targets.indexOf(id), 1);
+            } else {
+                console.log('add target ' + id);
+                $e.addClass('attack_target');
+                attack_targets.push(id);
+            }
+        });
+        $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').on({
+            touchstart: function() {
+                h_long_press_timeout = setTimeout(function() {
+                    h_long_press_timeout = undefined;
+                    $(this).trigger('dblclick');
+                }, 1000);
+            },
+            touchmove: function() {
+                if (h_long_press_timeout) {
+                    clearTimeout(h_long_press_timeout); 
+                    h_long_press_timeout = undefined;
+                }
+            },
+            touchend: function() {
+                if (h_long_press_timeout) {
+                    clearTimeout(h_long_press_timeout); 
+                    h_long_press_timeout = undefined;
+                }
+            }
+        });
+    }
+    var _go_combat = window.gSocketMsg.go_combat;
+	window.gSocketMsg.go_combat = function() {
+		_go_combat.apply(this, arguments);
+        enhance_combat();
+	};
+    enhance_combat();
 
 	var qixia_id_pattern = /^(langfuyu|wangrong|pangtong|liyufei|bujinghong|fengxingzhui|guoji|wuzhen|fengnan|huoyunxieshen|niwufeng|hucangyan|huzhu|xuanyueyan|langjuxu|liejiuzhou|mumiaoyu|yuwenwudi|lixuanba|babulongjiang|fengwuhen|licangruo|xiaqing|miaowuxin|wuyeju)_/;
 	var _show_npc = window.gSocketMsg2.show_npc;
