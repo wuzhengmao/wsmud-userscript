@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.10
+// @version      1.0.0.11
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -10,7 +10,6 @@
 // @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
 // @grant        unsafeWindow
-// @grant        GM_addStyle
 // ==/UserScript==
 // v1.0.0.02 2018.05.24 增加逃犯的触发器#t+ taofan
 // v1.0.0.04 2018.05.24 增加手机长按打开命令行的功能
@@ -20,6 +19,7 @@
 // v1.0.0.08 2018.06.03 阻止长按事件冒泡
 // v1.0.0.09 2018.06.03 BUG修复
 // v1.0.0.10 2018.06.03 改为点击锁定攻击目标
+// v1.0.0.11 2018.06.03 优化锁定攻击的算法，增加#connect指令
 
 (function(window) {
     'use strict';
@@ -62,6 +62,9 @@
 	skills.put('十怒绞龙索', [ '燎原百破', '玄胤天雷', '排云掌法', '雪饮狂刀' ]);
 	skills.put('辉月杖法', [ '四海断潮斩', '玄胤天雷', '排云掌法', '雪饮狂刀' ]);
 	skills.put('玄天杖法', [ '织冰剑法', '孔雀翎', '九溪断月枪', '天火飞锤' ]);
+    var sorted_attack_skills = ['九溪断月枪', '燎原百破', '昊云破周斧', '四海断潮斩', '天火飞锤', '玄胤天雷', '玄天杖法', '辉月杖法',
+            '破军棍诀', '千影百伤棍', '十怒绞龙索', '拈花解语鞭', '飞刀绝技', '孔雀翎', '排云掌法', '如来神掌', '九天龙吟剑法',
+            '覆雨剑法', '织冰剑法', '雪饮狂刀', '翻云刀法'];
 	var skill_chains = [ '九天龙吟剑法', '覆雨剑法', '织冰剑法', '排云掌法', '如来神掌', '雪饮狂刀',
 			'翻云刀法', '飞刀绝技', '孔雀翎', '道种心魔经', '生生造化功', '幽影幻虚步', '万流归一',
 			'燎原百破', '九溪断月枪', '玄胤天雷', '天火飞锤', '四海断潮斩', '昊云破周斧',
@@ -477,7 +480,8 @@
                                     if (attack_targets.indexOf(pos2[0] + pos2[1]) >= 0) {
                                         console.log('match target');
                                         var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
-                                        select_perform(get_skill_buttons(xdz));
+                                        var uid = vs_info.get(pos2[0] + '_pos' + pos2[1]);
+                                        select_perform(get_skill_buttons(xdz), is_player(uid));
                                     }
                                 } else if (pos2) {
                                     for (var i = 0; i < attack_targets.length; i++) {
@@ -770,27 +774,30 @@
 		return buttons;
 	}
 	function select_perform(buttons, no_combo) {
-        for ( var i = 0; i < buttons.length; i++) {
-            if (buttons[i]) {
-                var pfms = skills.get(buttons[i]);
-                if (pfms) {
-                    if (no_combo) {
-                        clickButton('playskill ' + (i + 1));
+        for (var i = 0; i < sorted_attack_skills.length; i++) {
+            var j = buttons.indexOf(sorted_attack_skills[i]);
+            if (j < 0) {
+                continue;
+            }
+            if (no_combo) {
+                clickButton('playskill ' + (j + 1));
+                return true;
+            }
+            var pfms = skills.get(sorted_attack_skills[i]);
+            if (pfms) {
+                for (var k = 1; k < buttons.length; k++) {
+                    if (buttons[k] && k != j && pfms.indexOf(buttons[k]) >= 0) {
+                        clickButton('playskill ' + (j + 1) + '\nplayskill '
+                                    + (k + 1));
                         return true;
                     }
-                    for ( var j = i + 1; j < buttons.length; j++) {
-                        if (buttons[j] && pfms.indexOf(buttons[j]) >= 0) {
-                            clickButton('playskill ' + (i + 1) + '\nplayskill '
-                                        + (j + 1));
-                            return true;
-                        }
-                    }
-                    for ( var j = i + 1; j < buttons.length; j++) {
-                        if (buttons[j] && skills.containsKey(buttons[j])) {
-                            clickButton('playskill ' + (i + 1) + '\nplayskill '
-                                        + (j + 1));
-                            return true;
-                        }
+                }
+                for (var k = i + 1; k < sorted_attack_skills.length; k++) {
+                    var l = buttons.indexOf(sorted_attack_skills[k]);
+                    if (l >= 0) {
+                        clickButton('playskill ' + (j + 1) + '\nplayskill '
+                                    + (l + 1));
+                        return true;
                     }
                 }
             }
@@ -1457,6 +1464,9 @@
 			console.log('taofan trigger closed');
 			remove_listener(taofan_trigger);
 			taofan_trigger = undefined;
+		} else if (cmd == '#connect') {
+            g_delay_connect = 0;
+            connectServer();
 		} else if (cmd.substr(0, 7) == '#alias ') {
 			var alias = $.trim(cmd.substr(7));
 			var key, value, i = alias.indexOf(' ');
@@ -1958,7 +1968,7 @@
 		}
 	});
 
-    GM_addStyle('.attack_target {border: 1px solid red;}');
+    $('head').append('<style type="text/css">.attack_target {border: 1px solid red;}</style>');
     function enhance_combat() {
         $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').click(function() {
             var vs_info = g_obj_map.get('msg_vs_info');
