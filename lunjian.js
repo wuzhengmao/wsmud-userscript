@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.8
+// @version      1.0.0.9
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -18,6 +18,7 @@
 // v1.0.0.6 2018.05.25 F1对于没有阵法的江湖绝学也能一起释放
 // v1.0.0.7 2018.06.03 增加了双击锁定攻击目标的功能
 // v1.0.0.8 2018.06.03 阻止长按事件冒泡
+// v1.0.0.9 2018.06.03 BUG修复
 
 (function(window) {
     'use strict';
@@ -1980,9 +1981,10 @@
         });
         $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').on({
             touchstart: function(e) {
+				var _this = this;
                 h_long_press_timeout = setTimeout(function() {
                     h_long_press_timeout = undefined;
-                    $(this).trigger('dblclick');
+                    $(_this).trigger('dblclick');
                 }, 1000);
  				e.preventDefault();
            },
