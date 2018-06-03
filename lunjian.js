@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.9
+// @version      1.0.0.10
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -12,13 +12,14 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // ==/UserScript==
-// v1.0.0.2 2018.05.24 增加逃犯的触发器#t+ taofan
-// v1.0.0.4 2018.05.24 增加手机长按打开命令行的功能
-// v1.0.0.5 2018.05.24 修复在部分房间首次登入方向指令错误的BUG
-// v1.0.0.6 2018.05.25 F1对于没有阵法的江湖绝学也能一起释放
-// v1.0.0.7 2018.06.03 增加了双击锁定攻击目标的功能
-// v1.0.0.8 2018.06.03 阻止长按事件冒泡
-// v1.0.0.9 2018.06.03 BUG修复
+// v1.0.0.02 2018.05.24 增加逃犯的触发器#t+ taofan
+// v1.0.0.04 2018.05.24 增加手机长按打开命令行的功能
+// v1.0.0.05 2018.05.24 修复在部分房间首次登入方向指令错误的BUG
+// v1.0.0.06 2018.05.25 F1对于没有阵法的江湖绝学也能一起释放
+// v1.0.0.07 2018.06.03 增加了双击锁定攻击目标的功能
+// v1.0.0.08 2018.06.03 阻止长按事件冒泡
+// v1.0.0.09 2018.06.03 BUG修复
+// v1.0.0.10 2018.06.03 改为点击锁定攻击目标
 
 (function(window) {
     'use strict';
@@ -1959,7 +1960,7 @@
 
     GM_addStyle('.attack_target {border: 1px solid red;}');
     function enhance_combat() {
-        $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').dblclick(function() {
+        $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').click(function() {
             var vs_info = g_obj_map.get('msg_vs_info');
             if (!vs_info || vs_info.get('is_watcher')) {
                 return;
@@ -1974,30 +1975,6 @@
                 console.log('add target ' + id);
                 $e.addClass('attack_target');
                 attack_targets.push(id);
-            }
-        });
-        $('td#vs11,td#vs12,td#vs13,td#vs14,td#vs15,td#vs16,td#vs17,td#vs18,td#vs21,td#vs22,td#vs23,td#vs24,td#vs25,td#vs26,td#vs27,td#vs28', '.out_top').on({
-            touchstart: function(e) {
-				var _this = this;
-                h_long_press_timeout = setTimeout(function() {
-                    h_long_press_timeout = undefined;
-                    $(_this).trigger('dblclick');
-                }, 1000);
- 				e.preventDefault();
-           },
-            touchmove: function(e) {
-                if (h_long_press_timeout) {
-                    clearTimeout(h_long_press_timeout); 
-                    h_long_press_timeout = undefined;
-                }
-				e.preventDefault();
-            },
-            touchend: function(e) {
-                if (h_long_press_timeout) {
-                    clearTimeout(h_long_press_timeout); 
-                    h_long_press_timeout = undefined;
-                }
-				e.preventDefault();
             }
         });
     }
