@@ -1936,7 +1936,6 @@
 					cmdline.detach();
 				}
 			}, 1000);
-			e.preventDefault();
 		},
 		touchmove: function(e) {
 			if (e.isDefaultPrevented()) {
@@ -1946,7 +1945,6 @@
 				clearTimeout(h_long_press_timeout); 
 				h_long_press_timeout = undefined;
 			}
-			e.preventDefault();
 		},
 		touchend: function(e) {
 			if (e.isDefaultPrevented()) {
@@ -1956,7 +1954,6 @@
 				clearTimeout(h_long_press_timeout); 
 				h_long_press_timeout = undefined;
 			}
-			e.preventDefault();
 		}
 	});
 
