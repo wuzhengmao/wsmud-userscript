@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.11
+// @version      1.0.0.12
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -20,6 +20,7 @@
 // v1.0.0.09 2018.06.03 BUG修复
 // v1.0.0.10 2018.06.03 改为点击锁定攻击目标
 // v1.0.0.11 2018.06.03 优化锁定攻击的算法，增加#connect指令
+// v1.0.0.12 2018.06.04 增加自动重连的触发器#t+ connect
 
 (function(window) {
     'use strict';
@@ -960,7 +961,7 @@
 		}
 		return null;
 	}
-	var task_h_timer, task_h_listener, pintu_trigger, taofan_trigger;
+	var task_h_timer, task_h_listener, connect_trigger, pintu_trigger, taofan_trigger;
 	function stop_task() {
 		if (task_h_timer) {
 			clearInterval(task_h_timer);
@@ -1351,6 +1352,16 @@
 					
 				}
 			});
+		} else if (cmd == '#t+ connect' && !connect_trigger) {
+			console.log('open connect trigger...');
+			connect_trigger = add_listener('disconnect', 'change',
+					function(msg) {
+                        execute_cmd('#connect');
+					});
+		} else if (cmd == '#t- connect' && connect_trigger) {
+			console.log('connect trigger closed');
+			remove_listener(connect_trigger);
+			connect_trigger = undefined;
 		} else if (cmd == '#t+ pintu' && !pintu_trigger) {
 			console.log('open pintu trigger...');
 			var bad_npc, good_npc;
