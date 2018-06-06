@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.0.0.12
+// @version      1.1.0.00
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -9,6 +9,7 @@
 // @match        http://sword-server1.yytou.cn/*
 // @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
+// @require      https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian-lib.js#v3
 // @grant        unsafeWindow
 // ==/UserScript==
 // v1.0.0.02 2018.05.24 增加逃犯的触发器#t+ taofan
@@ -21,79 +22,24 @@
 // v1.0.0.10 2018.06.03 改为点击锁定攻击目标
 // v1.0.0.11 2018.06.03 优化锁定攻击的算法，增加#connect指令
 // v1.0.0.12 2018.06.04 增加自动重连的触发器#t+ connect
+// v1.1.0.00 2018.06.07 增加了#t+ qinglong #t+ biaoche #t+ party #t+ guild #t+ task #question #heal等功能
 
 (function(window) {
     'use strict';
+    
+    if (self != top) {
+        top.location.href = location.href;
+        return;
+    }
     
     setTimeout(function() {
 	if (!window.gSocketMsg || !window.gSocketMsg2) {
 		return;
 	}
-	if (!window.g_obj_map.get('msg_attrs')) {
+	if (!g_obj_map.get('msg_attrs')) {
 		clickButton('attrs');
 		return;
 	}
-	var show_target = true;
-	var auto_attack = false;
-	var auto_defence = false;
-	var auto_fight = false;
-	var user_id_pattern1 = /^u[0-9]+$/;
-	var user_id_pattern2 = /^u[0-9]+\-/;
-	var kuafu_name_pattern = /^\[[0-9]+\]/;
-	var kuafu = '[1-5区]';
-	var skills = new Map();
-	skills.put('九天龙吟剑法', [ '排云掌法', '雪饮狂刀', '千影百伤棍', '燎原百破' ]);
-	skills.put('覆雨剑法', [ '翻云刀法', '如来神掌', '昊云破周斧', '拈花解语鞭' ]);
-	skills.put('织冰剑法', [ '孔雀翎', '飞刀绝技', '玄天杖法', '天火飞锤' ]);
-	skills.put('排云掌法', [ '九天龙吟剑法', '雪饮狂刀', '辉月杖法', '千影百伤棍', '玄胤天雷', '十怒绞龙索' ]);
-	skills.put('如来神掌', [ '覆雨剑法', '孔雀翎', '昊云破周斧', '九溪断月枪' ]);
-	skills.put('雪饮狂刀', [ '九天龙吟剑法', '排云掌法', '辉月杖法', '十怒绞龙索' ]);
-	skills.put('翻云刀法', [ '覆雨剑法', '飞刀绝技', '破军棍诀', '天火飞锤', '燎原百破' ]);
-	skills.put('飞刀绝技', [ '翻云刀法', '织冰剑法', '玄天杖法', '玄胤天雷', '九溪断月枪' ]);
-	skills.put('孔雀翎', [ '如来神掌', '织冰剑法', '四海断潮斩', '破军棍诀' ]);
-	skills.put('燎原百破', [ '千影百伤棍', '十怒绞龙索', '九天龙吟剑法', '翻云刀法' ]);
-	skills.put('九溪断月枪', [ '拈花解语鞭', '玄天杖法', '孔雀翎', '如来神掌' ]);
-	skills.put('玄胤天雷', [ '辉月杖法', '十怒绞龙索', '排云掌法', '孔雀翎' ]);
-	skills.put('天火飞锤', [ '玄天杖法', '破军棍诀', '翻云刀法', '织冰剑法' ]);
-	skills.put('四海断潮斩', [ '辉月杖法', '千影百伤棍', '雪饮狂刀', '飞刀绝技' ]);
-	skills.put('昊云破周斧', [ '破军棍诀', '拈花解语鞭', '覆雨剑法', '如来神掌' ]);
-	skills.put('千影百伤棍', [ '燎原百破', '四海断潮斩', '九天龙吟剑法', '排云掌法' ]);
-	skills.put('破军棍诀', [ '昊云破周斧', '天火飞锤', '翻云刀法', '飞刀绝技' ]);
-	skills.put('拈花解语鞭', [ '昊云破周斧', '九溪断月枪', '覆雨剑法' ]);
-	skills.put('十怒绞龙索', [ '燎原百破', '玄胤天雷', '排云掌法', '雪饮狂刀' ]);
-	skills.put('辉月杖法', [ '四海断潮斩', '玄胤天雷', '排云掌法', '雪饮狂刀' ]);
-	skills.put('玄天杖法', [ '织冰剑法', '孔雀翎', '九溪断月枪', '天火飞锤' ]);
-    var sorted_attack_skills = ['九溪断月枪', '燎原百破', '昊云破周斧', '四海断潮斩', '天火飞锤', '玄胤天雷', '玄天杖法', '辉月杖法',
-            '破军棍诀', '千影百伤棍', '十怒绞龙索', '拈花解语鞭', '飞刀绝技', '孔雀翎', '排云掌法', '如来神掌', '九天龙吟剑法',
-            '覆雨剑法', '织冰剑法', '雪饮狂刀', '翻云刀法'];
-	var skill_chains = [ '九天龙吟剑法', '覆雨剑法', '织冰剑法', '排云掌法', '如来神掌', '雪饮狂刀',
-			'翻云刀法', '飞刀绝技', '孔雀翎', '道种心魔经', '生生造化功', '幽影幻虚步', '万流归一',
-			'燎原百破', '九溪断月枪', '玄胤天雷', '天火飞锤', '四海断潮斩', '昊云破周斧',
-			'千影百伤棍', '破军棍诀', '拈花解语鞭', '十怒绞龙索', '辉月杖法', '玄天杖法'];
-	var force_skills = [ '道种心魔经', '生生造化功', '不动明王诀', '八荒功', '易筋经神功', '天邪神功',
-			'紫霞神功', '葵花宝典', '九阴真经', '茅山道术', '蛤蟆神功', '碧血心法' ];
-	var dodge_skills = [ '万流归一', '幽影幻虚步', '乾坤大挪移', '凌波微步', '无影毒阵', '九妙飞天术' ];
-	var defence_patterns = [ /(.*)顿时被冲开老远，失去了攻击之势！/, /(.*)被(.*)的真气所迫，只好放弃攻击！/,
-			/(.*)衣裳鼓起，真气直接将(.*)逼开了！/, /(.*)找到了闪躲的空间！/, /(.*)朝边上一步闪开！/,
-			/面对(.*)的攻击，(.*)毫不为惧！/, /(.*)使出“(.*)”，希望扰乱(.*)的视线！/,
-			/(.*)深深吸了几口气，脸色看起来好多了。/ ];
-	var pozhao_ok_patterns = [ /(.*)的招式尽数被(.*)所破！/, /(.*)这一招正好击向了(.*)的破绽！/,
-			/(.*)一不留神，招式被(.*)所破！/ ];
-	var pozhao_fail_patterns = [ /(.*)的对攻无法击破(.*)的攻势，处于明显下风！/,
-			/(.*)的招式并未有明显破绽，(.*)只好放弃对攻！/,
-			/(.*)这一招并未奏效，仍被(.*)招式紧逼！/ ];
-	var combo_patterns = [ /(.*)招式之间组合成了更为凌厉的攻势！/,
-	        /(.*)这几招配合起来，威力更为惊人！/,
-	        /(.*)将招式连成一片，令你眼花缭乱！/ ];
-	var force_attack_pattern = /(.*)使出“.+”，一股内劲涌向(.*)(左手|右手|后心|左耳|右耳|两肋|左肩|右肩|左腿|右腿|左臂|右臂|腰间|左脸|右脸|小腹|颈部|头顶|左脚|右脚)！/;
-	var friend_list = [ 'u2819948', 'u2771755', 'u3324214', 'u2626349',
-			'u2634663', 'u2612522', 'u3019083', 'u2860723', 'u2617077',
-			'u2617092', 'u2616450', 'u2637402', 'u2617579', 'u2616211',
-			'u3444969', 'u6099572', 'u5903155', 'u2619076', 'u2617955',
-			'u2617521', 'u4643196', 'u2747758', 'u2615809', 'u2616994',
-			'u3093166', 'u3827219', 'u3288641', 'u2756496', 'u3071047',
-			'u2863851', 'u3884564', 'u2637468', 'u2790969', 'u3399330',
-			'u3892886' ];
 	var aliases = new Map();
 	aliases.put('l', 'look');
 	aliases.put('i', 'items');
@@ -127,6 +73,65 @@
 	aliases.put('wudu1', 'fly 40;s;s;s;s;e;s;se;sw;s;s;s;e;e;sw;se;sw;se');
 	aliases.put('wudu2', 'se;s;s;e;n;n;e;s;e;ne;s;sw;e;e;ne;ne;nw;ne;ne;n');
 	aliases.put('dishi', 'fly 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721');
+	var friend_list = [ 'u2819948', 'u2771755', 'u3324214', 'u2626349',
+			'u2634663', 'u2612522', 'u3019083', 'u2860723', 'u2617077',
+			'u2617092', 'u2616450', 'u2637402', 'u2617579', 'u2616211',
+			'u3444969', 'u6099572', 'u5903155', 'u2619076', 'u2617955',
+			'u2617521', 'u4643196', 'u2747758', 'u2615809', 'u2616994',
+			'u3093166', 'u3827219', 'u3288641', 'u2756496', 'u3071047',
+			'u2863851', 'u3884564', 'u2637468', 'u2790969', 'u3399330',
+			'u3892886' ];
+	var show_target = true;
+	var auto_attack = false;
+	var auto_defence = false;
+	var auto_fight = false;
+	var user_id_pattern1 = /^u[0-9]+$/;
+	var user_id_pattern2 = /^u[0-9]+\-/;
+	var kuafu_name_pattern = /^\[[0-9]+\]/;
+	var kuafu = '[1-5区]';
+    var sorted_power_skills = ['九溪断月枪', '燎原百破', '昊云破周斧', '四海断潮斩', '天火飞锤', '玄胤天雷', '玄天杖法', '辉月杖法',
+            '破军棍诀', '千影百伤棍', '十怒绞龙索', '拈花解语鞭', '飞刀绝技', '孔雀翎', '排云掌法', '如来神掌', '九天龙吟剑法',
+            '覆雨剑法', '织冰剑法', '雪饮狂刀', '翻云刀法'];
+	var skill_chains = [ '九天龙吟剑法', '覆雨剑法', '织冰剑法', '排云掌法', '如来神掌', '雪饮狂刀',
+			'翻云刀法', '飞刀绝技', '孔雀翎', '道种心魔经', '生生造化功', '幽影幻虚步', '万流归一',
+			'燎原百破', '九溪断月枪', '玄胤天雷', '天火飞锤', '四海断潮斩', '昊云破周斧',
+			'千影百伤棍', '破军棍诀', '拈花解语鞭', '十怒绞龙索', '辉月杖法', '玄天杖法'];
+	var force_skills = [ '道种心魔经', '生生造化功', '不动明王诀', '八荒功', '易筋经神功', '天邪神功',
+			'紫霞神功', '葵花宝典', '九阴真经', '茅山道术', '蛤蟆神功', '碧血心法' ];
+	var dodge_skills = [ '万流归一', '幽影幻虚步', '乾坤大挪移', '凌波微步', '无影毒阵', '九妙飞天术' ];
+	var defence_patterns = [ /(.*)顿时被冲开老远，失去了攻击之势！/, /(.*)被(.*)的真气所迫，只好放弃攻击！/,
+			/(.*)衣裳鼓起，真气直接将(.*)逼开了！/, /(.*)找到了闪躲的空间！/, /(.*)朝边上一步闪开！/,
+			/面对(.*)的攻击，(.*)毫不为惧！/, /(.*)使出“(.*)”，希望扰乱(.*)的视线！/,
+			/(.*)深深吸了几口气，脸色看起来好多了。/ ];
+	var pozhao_ok_patterns = [ /(.*)的招式尽数被(.*)所破！/, /(.*)这一招正好击向了(.*)的破绽！/,
+			/(.*)一不留神，招式被(.*)所破！/ ];
+	var pozhao_fail_patterns = [ /(.*)的对攻无法击破(.*)的攻势，处于明显下风！/,
+			/(.*)的招式并未有明显破绽，(.*)只好放弃对攻！/,
+			/(.*)这一招并未奏效，仍被(.*)招式紧逼！/ ];
+	var combo_patterns = [ /(.*)招式之间组合成了更为凌厉的攻势！/,
+	        /(.*)这几招配合起来，威力更为惊人！/,
+	        /(.*)将招式连成一片，令你眼花缭乱！/ ];
+	var force_attack_pattern = /(.*)使出“.+”，一股内劲涌向(.*)(左手|右手|后心|左耳|右耳|两肋|左肩|右肩|左腿|右腿|左臂|右臂|腰间|左脸|右脸|小腹|颈部|头顶|左脚|右脚)！/;
+    var qinglong_npcs = new Map();
+    qinglong_npcs.put('打铁铺子', '王铁匠');
+    qinglong_npcs.put('桑邻药铺', '杨掌柜');
+    qinglong_npcs.put('书房', '柳绘心');
+    qinglong_npcs.put('南市', '客商');
+    qinglong_npcs.put('绣楼', '柳小花');
+    qinglong_npcs.put('北大街', '卖花姑娘');
+    qinglong_npcs.put('钱庄', '刘守财');
+    qinglong_npcs.put('杂货铺', '方老板');
+    qinglong_npcs.put('祠堂大门', '朱老伯');
+    qinglong_npcs.put('厅堂', '方寡妇');
+    var qinglong_list = [ '龙骨宝甲', '斩龙宝靴', '龙皮至尊衣', '斩龙宝戒', '斩龙帽', '斩龙宝链', '轩辕神盾', '鎏金缦罗', '天蚕围腰',
+            '斩龙宝镯', '飞宇天怒刀', '九天龙吟剑', '小李飞刀', '天罡掌套', '乌金玄火鞭', '开天宝棍', '达摩杖', '龙鳞', '天雷断龙斧',
+            '烛幽鬼煞锤', '斩龙鎏金枪', '胤天帽碎片', '胤天项链碎片', '胤天宝镯碎片', '胤天宝戒碎片', '胤天宝靴碎片', '胤天紫金衣碎片',
+            '昊天龙旋铠碎片', '鱼肠碎片', '水羽云裳碎片', '奉天金带碎片', '凤羽乾坤盾碎片', '雷霆诛神刀碎片', '轩辕剑碎片', '破岳拳套碎片',
+            '天雨玄镖碎片', '天神杖碎片', '轰天巨棍碎片', '神龙怒火鞭碎片', '胤武伏魔斧碎片', '九天灭世锤碎片', '玄冰凝魄枪碎片',
+            '烛龙神武冕碎片', '九鼎宝链碎片', '天武护镯碎片', '紫贪狼戒碎片', '山海羲皇靴碎片', '凤麟天华衣碎片', '皇极圣战铠碎片',
+            '灭魂匕碎片', '霸天圣袍碎片', '魔尊腰带碎片', '皇天无极盾碎片', '武皇惊霆刀碎片', '傲世圣极剑碎片', '驭风腾云碎片',
+            '驭风腾云碎片', '夜冥鬼泣碎片', '九霄渡业杖碎片', '倾宇破穹棍碎片', '无间诛魂鞭碎片', '不周开天斧碎片', '狂澜碎天锤碎片',
+            '紫龙镇嶽枪碎片' ];
 	var map_ids = new Map();
 	map_ids.put('xueting', '1');
 	map_ids.put('xt', '1');
@@ -268,6 +273,8 @@
 	secrets.put("dixiamigong", 2980);
 	secrets.put("duzhanglin", 2980);
 	secrets.put("langhuanyudong", 2980);
+	secrets.put("shanya", 2980);
+    
 	var message_listeners = [];
 	var listener_seq = 0;
 	function add_listener(type, subtype, fn, is_pre) {
@@ -298,10 +305,15 @@
 					&& (!listener.subtype
 							|| listener.subtype == msg.get('subtype') || (listener.subtype instanceof Array && $
 							.inArray(msg.get('subtype'), listener.subtype) >= 0))) {
-				listener.fn(msg);
+				if (listener.fn(msg)) {
+                    return;
+                }
 			}
 		}
-		_dispatch_message.apply(this, arguments);
+        if (msg.get('type') != 'main_msg' || msg.get('ctype') != 'text'
+                || !/.+送出一支玫瑰花给本服的所有玩家，所有玩家经验\+15000、潜能\+15000/.test(msg.get('msg'))) {
+            _dispatch_message.apply(this, arguments);
+        }
 		for ( var i = 0; i < message_listeners.length; i++) {
 			var listener = message_listeners[i];
 			if (!listener.is_pre
@@ -310,10 +322,20 @@
 					&& (!listener.subtype
 							|| listener.subtype == msg.get('subtype') || (listener.subtype instanceof Array && $
 							.inArray(msg.get('subtype'), listener.subtype) >= 0))) {
-				listener.fn(msg);
+				if (listener.fn(msg)) {
+                    return;
+                }
 			}
 		}
 	};
+    function log(text) {
+        var msg = new Map();
+        msg.put('type', 'main_msg');
+        msg.put('ctype', 'text');
+        msg.put('msg', HIG + text);
+        _dispatch_message(msg);
+        console.log(text);
+    }
 	var _click_button = window.clickButton;
 	window.clickButton = function(cmd, k) {
 		if (cmd.substr(0, 1) == '#') {
@@ -338,7 +360,29 @@
 		}
 		return _make_cmd.apply(this, arguments);
 	};
-	var vs_text = '', defence_performed = false, attack_targets = [];
+    
+	window.Date.prototype.format = function (fmt) { //author: meizz
+	    var o = {
+	        "M+": this.getMonth() + 1, //月份
+	        "d+": this.getDate(), //日
+	        "H+": this.getHours(), //小时
+	        "m+": this.getMinutes(), //分
+	        "s+": this.getSeconds(), //秒
+	        "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+	        "S": this.getMilliseconds() //毫秒
+	    };
+	    if (/(y+)/.test(fmt)) {
+            fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+        }
+	    for (var k in o) {
+            if (new RegExp("(" + k + ")").test(fmt)) {
+                fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+            }
+        }
+	    return fmt;
+	}
+    
+    var vs_text = '', defence_performed = false, attack_targets = [];
 	add_listener(
 			'vs',
 			'',
@@ -360,7 +404,7 @@
                     });
                 } else if (subtype == 'die') {
                     var vid = msg.get('vid');
-					var vs_info = window.g_obj_map.get('msg_vs_info');
+					var vs_info = g_obj_map.get('msg_vs_info');
                     var $e;
                     for (var i = 1; i <= 8; i++) {
                         if (vs_info.get('vs1_pos_v' + i) == vid) {
@@ -386,13 +430,13 @@
                 } else if (subtype == 'text') {
 					vs_text += msg.get('msg');
 				} else if (subtype == 'add_xdz') {
-					var my_id = window.g_obj_map.get('msg_attrs').get('id');
+					var my_id = g_obj_map.get('msg_attrs').get('id');
 					if (msg.get('uid') == my_id) {
 						defence_performed = false;
 					}
 				} else if (subtype == 'playskill' && parseInt(msg.get('ret')) == 0) {
-					var my_id = window.g_obj_map.get('msg_attrs').get('id');
-					var vs_info = window.g_obj_map.get('msg_vs_info');
+					var my_id = g_obj_map.get('msg_attrs').get('id');
+					var vs_info = g_obj_map.get('msg_vs_info');
 					var pfm = removeSGR(msg.get('name'));
 					if (!is_defence(vs_text)) {
 						if (msg.get('uid') == my_id) {
@@ -431,7 +475,6 @@
 											auto_pfm(vs_info, pfm, v1, p1,
 													v2, p2);
 										} else if (attack_targets.indexOf(v2 + i) >= 0) {
-                                            console.log('match target');
 											var xdz = parseInt(vs_info.get(v1 + '_xdz' + p1));
                                             select_perform(get_skill_buttons(xdz));
 										}
@@ -461,7 +504,7 @@
                                                             + vs_info.get(pos2[0] + '_name' + pos2[1]));
                                             }
                                             if (auto_defence && !defence_performed && has_npc(vs_info, pos1[0]) && has_npc(vs_info, pos2[0])) {
-                                                var max_kee1 = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
+                                                var max_kee1 = parseInt(g_obj_map.get('msg_attrs').get('max_kee'));
                                                 var max_kee2 = parseInt(vs_info.get(pos2[0] + '_max_kee' + pos2[1]));
                                                 if (max_kee2 > max_kee1 * 0.8) {
                                                     var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
@@ -479,7 +522,6 @@
                                         }
                                     }
                                     if (attack_targets.indexOf(pos2[0] + pos2[1]) >= 0) {
-                                        console.log('match target');
                                         var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
                                         var uid = vs_info.get(pos2[0] + '_pos' + pos2[1]);
                                         select_perform(get_skill_buttons(xdz), is_player(uid));
@@ -489,7 +531,6 @@
                                         var uid = vs_info.get(attack_targets[i].substring(0, 3) + '_pos' + attack_targets[i].substring(3));
                                         var name = vs_info.get(attack_targets[i].substring(0, 3) + '_name' + attack_targets[i].substring(3));
                                         if (!is_player(uid) && vs_text.indexOf(name) >= 0) {
-                                            console.log('match target');
                                             var xdz = parseInt(vs_info.get(pos1[0] + '_xdz' + pos1[1]));
                                             select_perform(get_skill_buttons(xdz));
                                         }
@@ -506,6 +547,18 @@
                     attack_targets = [];
                 }
 			});
+	function set_attack_target(target_id) {
+		if (!window.is_fighting) {
+			return;
+		}
+		var vs_info = g_obj_map.get('msg_vs_info');
+		var pos = check_pos(vs_info, target_id);
+		if (pos) {
+            $('td#' + pos[0] + pos[1], '.out_top').click();
+		} else {
+            console.log('target ' + target_id + ' not found');
+        }
+	}
 	function is_defence(vs_text) {
 		for ( var i = 0; i < defence_patterns.length; i++) {
 			if (defence_patterns[i]
@@ -647,6 +700,9 @@
 	function removeSGR(text) {
 		return text ? text.replace(/\u001b\[[;0-9]+m/g, '') : '';
 	}
+	function removeLink(text) {
+		return text ? text.replace(/\u0003[^\u0003]*\u0003/g, '') : '';
+	}
 	function auto_pfm(vs_info, pfm, v1, p1, v2, p2) {
 		var xdz = parseInt(vs_info.get(v1 + '_xdz' + p1));
 		var max_kee = parseInt(vs_info.get(v2 + '_max_kee' + p2));
@@ -676,13 +732,13 @@
 		} else {
 			k = 0;
 		}
-		if (skills.containsKey(pfm)) {
+		if (LIBS.power_skills.containsKey(pfm)) {
 			k = k > 0 ? k - 1 : 0;
 		}
 		if (k > 0) {
 			var buttons = get_skill_buttons(xdz);
 			if (k == 1) {
-				var pfms = skills.get(pfm);
+				var pfms = LIBS.power_skills.get(pfm);
 				if (pfms) {
 					for ( var i = 0; i < buttons.length; i++) {
 						if (buttons[i] && pfms.indexOf(buttons[i]) >= 0) {
@@ -692,13 +748,13 @@
 					}
 				}
 				for ( var i = 0; i < buttons.length; i++) {
-					if (buttons[i] && skills.containsKey(buttons[i])) {
+					if (buttons[i] && LIBS.power_skills.containsKey(buttons[i])) {
 						clickButton('playskill ' + (i + 1));
 						break;
 					}
 				}
 			} else if (k == 2) {
-				var pfms = skills.get(pfm);
+				var pfms = LIBS.power_skills.get(pfm);
 				if (pfms) {
 					for ( var i = 0; i < buttons.length; i++) {
 						if (buttons[i] && pfms.indexOf(buttons[i]) >= 0) {
@@ -715,8 +771,8 @@
 		if (!window.is_fighting) {
 			return;
 		}
-		var vs_info = window.g_obj_map.get('msg_vs_info');
-		var my_id = window.g_obj_map.get('msg_attrs').get('id');
+		var vs_info = g_obj_map.get('msg_vs_info');
+		var my_id = g_obj_map.get('msg_attrs').get('id');
 		var pos = check_pos(vs_info, my_id);
 		if (pos) {
 			var side = pos[0];
@@ -753,8 +809,8 @@
 		if (!window.is_fighting) {
 			return false;
 		}
-		var my_id = window.g_obj_map.get('msg_attrs').get('id');
-		var vs_info = window.g_obj_map.get('msg_vs_info');
+		var my_id = g_obj_map.get('msg_attrs').get('id');
+		var vs_info = g_obj_map.get('msg_vs_info');
 		var pos = check_pos(vs_info, my_id);
 		if (!pos) {
 			return false;
@@ -765,7 +821,7 @@
 	function get_skill_buttons(xdz) {
 		var buttons = [];
 		for ( var i = 0; i < 4; i++) {
-			var button = window.g_obj_map.get('skill_button' + (i + 1));
+			var button = g_obj_map.get('skill_button' + (i + 1));
 			if (button && parseInt(button.get('xdz')) <= xdz) {
 				buttons.push(removeSGR(button.get('name')));
 			} else {
@@ -775,8 +831,8 @@
 		return buttons;
 	}
 	function select_perform(buttons, no_combo) {
-        for (var i = 0; i < sorted_attack_skills.length; i++) {
-            var j = buttons.indexOf(sorted_attack_skills[i]);
+        for (var i = 0; i < sorted_power_skills.length; i++) {
+            var j = buttons.indexOf(sorted_power_skills[i]);
             if (j < 0) {
                 continue;
             }
@@ -784,7 +840,7 @@
                 clickButton('playskill ' + (j + 1));
                 return true;
             }
-            var pfms = skills.get(sorted_attack_skills[i]);
+            var pfms = LIBS.power_skills.get(sorted_power_skills[i]);
             if (pfms) {
                 for (var k = 1; k < buttons.length; k++) {
                     if (buttons[k] && k != j && pfms.indexOf(buttons[k]) >= 0) {
@@ -793,8 +849,8 @@
                         return true;
                     }
                 }
-                for (var k = i + 1; k < sorted_attack_skills.length; k++) {
-                    var l = buttons.indexOf(sorted_attack_skills[k]);
+                for (var k = i + 1; k < sorted_power_skills.length; k++) {
+                    var l = buttons.indexOf(sorted_power_skills[k]);
                     if (l >= 0) {
                         clickButton('playskill ' + (j + 1) + '\nplayskill '
                                     + (l + 1));
@@ -867,17 +923,17 @@
 						if (msg.get('subtype') == 'vs_info'
 								|| (msg.get('subtype') == 'die' && msg
 										.get('uid') != npc)) {
-							var vs_info = window.g_obj_map.get('msg_vs_info');
+							var vs_info = g_obj_map.get('msg_vs_info');
 							try_join_combat(vs_info, npc);
 						}
 					});
 			last_kill_time = new Date().getTime();
 			send_cmd('kill ' + npc + '\nwatch_vs ' + npc);
-			var my_id = window.g_obj_map.get('msg_attrs').get('id');
+			var my_id = g_obj_map.get('msg_attrs').get('id');
 			h_interval = setInterval(function() {
 				var is_fighting = false;
 				if (window.is_fighting) {
-					var vs_info = window.g_obj_map.get('msg_vs_info');
+					var vs_info = g_obj_map.get('msg_vs_info');
 					if (vs_info) {
 						is_started = true;
 						is_fighting = !!check_pos(vs_info, my_id);
@@ -910,7 +966,7 @@
 		}
 	};
 	function find_target(nameOrId, types) {
-		var room = window.g_obj_map.get('msg_room');
+		var room = g_obj_map.get('msg_room');
 		if (!room) {
 			return null;
 		}
@@ -961,12 +1017,13 @@
 		}
 		return null;
 	}
-	var task_h_timer, task_h_listener, connect_trigger, pintu_trigger, taofan_trigger;
-	function stop_task() {
+	var task_h_timer, task_h_listener, connect_trigger, pintu_trigger, taofan_trigger,
+            qinglong_trigger, biaoche_trigger, party_trigger, guild_trigger, task_trigger;
+	function stop_task(msg) {
 		if (task_h_timer) {
 			clearInterval(task_h_timer);
 			task_h_timer = undefined;
-			console.log('task stopped.');
+			log(msg || 'task stopped.');
 		} else if (task_h_listener) {
 			auto_fight = false;
 			var $b = $('button.cmd_combat_auto_fight');
@@ -977,7 +1034,7 @@
 			}
 			remove_listener(task_h_listener);
 			task_h_listener = undefined;
-			console.log('task stopped.');
+			log(msg || 'task stopped.');
 		}
 	}
 	function add_task_timer(fn, interval) {
@@ -988,6 +1045,22 @@
 		stop_task();
 		task_h_listener = add_listener(type, subtype, fn, is_pre);
 	}
+    function todo(callback) {
+        var h = add_listener(['main_msg', 'vs'], '', function(msg) {
+            if (((msg.get('type') == 'main_msg' && msg.get('ctype') == 'text')
+                    || (msg.get('type') == 'vs' && msg.get('subtype') == 'text'))
+                    && msg.get('msg').indexOf('你自言自语不知道在说些什么') == 0) {
+                remove_listener(h);
+				if (typeof callback === 'function') {
+					callback();
+				} else {
+					execute_cmd(callback);
+				}
+                return true;
+            }
+        }, true);
+        send_cmd('say');
+    }
 	function execute_cmd(cmd) {
 		if (cmd.substr(0, 6) == '#loop ') {
 			cmd = $.trim(cmd.substr(6));
@@ -1002,8 +1075,7 @@
 					}
 				}
 				if (cmd) {
-					stop_task();
-					console.log('starting loop...');
+					log('starting loop...');
 					var pc;
 					add_task_timer(function() {
 						if (!pc) {
@@ -1021,20 +1093,25 @@
 		} else if (cmd.substr(0, 6) == '#kill ') {
 			var name = $.trim(cmd.substr(6));
 			if (name) {
-				console.log('starting auto kill...');
+				log('starting auto kill...');
 				var target = find_target(name, [ 'npc' ]);
 				if (target) {
 					clickButton('kill ' + target[0]);
 					add_task_listener('jh', 'new_item', function(msg) {
 						if (removeSGR(msg.get('name')) == target[1] + '的尸体') {
 							clickButton('get ' + msg.get('id'));
-							console.log('ok!');
-							stop_task();
+							stop_task('ok!');
 							if (target[1] == '年兽') {
 								execute_cmd('#loop get ' + msg.get('id'));
 							}
 						}
 					}, true);
+                    if (target[1] == '年兽') {
+                        var h = add_listener('vs', 'vs_info', function(msg) {
+                            set_attack_target(target[0]);
+                            remove_listener(h);
+                        });
+                    }
 				} else {
 					add_task_listener(
 							'jh',
@@ -1043,7 +1120,8 @@
 								if (msg.get('id') == name
 										|| removeSGR(msg.get('name')) == name) {
 									name = removeSGR(msg.get('name'));
-									clickButton('kill ' + msg.get('id'));
+                                    var target_id = msg.get('id');
+									clickButton('kill ' + target_id);
 									add_task_listener(
 											'jh',
 											'new_item',
@@ -1052,21 +1130,26 @@
 														+ '的尸体') {
 													clickButton('get '
 															+ msg.get('id'));
-													console.log('ok!');
-													stop_task();
+													stop_task('ok!');
 													if (name == '年兽') {
 														execute_cmd('#loop get ' + msg.get('id'));
 													}
 												}
 											}, true);
-								}
+                                    if (name == '年兽') {
+                                        var h = add_listener('vs', 'vs_info', function(msg) {
+                                            set_attack_target(target_id);
+                                            remove_listener(h);
+                                        });
+                                    }
+                                }
 							}, true);
 				}
 			}
 		} else if (cmd.substr(0, 7) == '#fight ') {
 			var name = $.trim(cmd.substr(7));
 			if (name) {
-				console.log('starting auto fight...');
+				log('starting auto fight...');
 				var target = find_target(name, [ 'npc' ]);
 				if (target) {
 					clickButton('fight ' + target[0]);
@@ -1078,8 +1161,7 @@
 								if (msg.get('id') == name
 										|| removeSGR(msg.get('name')) == name) {
 									clickButton('fight ' + msg.get('id'));
-									console.log('ok!');
-									stop_task();
+									stop_task('ok!');
 								}
 							}, true);
 				}
@@ -1091,19 +1173,18 @@
 				if (target) {
 					clickButton('get ' + target[0]);
 				} else {
-					console.log('starting auto get...');
+					log('starting auto get...');
 					add_task_listener('jh', 'new_item', function(msg) {
 						if (msg.get('id') == name
 								|| removeSGR(msg.get('name')) == name) {
 							clickButton('get ' + msg.get('id'));
-							console.log('ok!');
-							stop_task();
+							stop_task('ok!');
 						}
 					}, true);
 				}
 			}
 		} else if (cmd == '#secret' || cmd.substr(0, 8) == '#secret ') {
-			var msg_room = window.g_obj_map.get('msg_room');
+			var msg_room = g_obj_map.get('msg_room');
 			var accept;
 			if (cmd == '#secret') {
 				accept = secrets.get(msg_room.get('map_id'));
@@ -1129,27 +1210,26 @@
 								var r = msg.get('msg').match(/^您已经通关过此副本，可以扫荡完成，\n扫荡完成的奖励为：玄铁令x(\d+)、朱果x(\d+)。/);
 								if (r) {
 									if (parseInt(r[2]) > accept) {
-										console.log('ok!');
-										stop_task();
+										stop_task('ok!');
 									} else {
 										send_cmd(saodang);
 									}
 								}
 							}, true);
-					console.log('starting clean out secret...');
+					log('starting clean out secret...');
 					send_cmd(saodang);
 				} else {
-					console.log('cannot clean out secret.');
+					log('cannot clean out secret.');
 				}
 			} else {
-				console.log('invalid command.');
+				log('invalid command.');
 			}
 		} else if (cmd == '#tianjiangu') {
-			console.log('starting tianjiangu combat...');
+			log('starting tianjiangu combat...');
 			add_task_listener(['jh', 'vs'], '', function(msg) {
 				if (msg.get('type') == 'jh' && (msg.get('subtype') == 'info'
 						|| msg.get('subtype') == 'new_npc' || msg.get('subtype') == 'dest_npc')) {
-					var msg_room = window.g_obj_map.get('msg_room');
+					var msg_room = g_obj_map.get('msg_room');
 					var target;
 					for (var i = 1; ; i++) {
 						var npc = msg_room.get('npc' + i);
@@ -1175,14 +1255,54 @@
 					if (msg.get('subtype') == 'combat_result') {
 						clickButton('prev_combat');
 					} else {
-						var vs_info = window.g_obj_map.get('msg_vs_info');
-						var my_id = window.g_obj_map.get('msg_attrs').get('id');
+						var vs_info = g_obj_map.get('msg_vs_info');
+						var my_id = g_obj_map.get('msg_attrs').get('id');
 						auto_combat(vs_info, my_id, msg);
 					}
 				}
 			});
+		} else if (cmd == '#question') {
+            log('starting auto answer question...');
+			add_task_listener('show_html_page', '', function(msg) {
+				var data = msg.get('msg');
+                if (data) {
+                    var r = data.match(/知识问答第\s*(\d+)\s*\/\s*(\d+)\s*题/);
+                    if (r) {
+                        var count = parseInt(r[1]);
+                        var total = parseInt(r[2]);
+                        if (data.indexOf('回答正确！') >= 0) {
+                            if (count < total) {
+                                send_cmd('question');
+                            } else {
+                                stop_task('finish!');
+                            }
+                        } else if (data.indexOf('回答错误！') >= 0) {
+                            log('answer is wrong!');
+                            if (count >= total) {
+                                stop_task('finish!');
+                            }
+                       } else {
+                            var answer;
+                            var q = LIBS.questions.keys();
+                            for (var i in q) {
+                                var k = q[i];
+                                if (data.indexOf(k) >= 0) {
+                                    answer = LIBS.questions.get(k);
+                                    break;
+                                }
+                            }
+                            if (answer) {
+                                send_cmd('question ' + answer);
+                            } else {
+                                log('answer not found!');
+                            }
+                        }
+                    }
+                }
+			});
+            send_cmd('question');
 		} else if (cmd == '#combat') {
-			console.log('starting auto combat...');
+			log('starting auto combat...');
 			auto_fight = true;
 			var $b = $('button.cmd_combat_no_auto_fight');
 			if ($b.length > 0) {
@@ -1191,12 +1311,12 @@
 				$b.onclick = 'clickButton("#stop", 0)';
 			}
 			add_task_listener('vs', '', function(msg) {
-				var vs_info = window.g_obj_map.get('msg_vs_info');
-				var my_id = window.g_obj_map.get('msg_attrs').get('id');
+				var vs_info = g_obj_map.get('msg_vs_info');
+				var my_id = g_obj_map.get('msg_attrs').get('id');
 				auto_combat(vs_info, my_id, msg);
 			});
 		} else if (cmd == '#pozhao') {
-			console.log('starting auto pozhao...');
+			log('starting auto pozhao...');
 			auto_fight = true;
 			var $b = $('button.cmd_combat_no_auto_fight');
 			if ($b.length > 0) {
@@ -1209,8 +1329,8 @@
 			var dalou_performs = [ '九溪断月枪', '九阴白骨爪' ];
 			// var dalou_performs = [ '千影百伤棍', '霜寒十四棍' ];
 			add_task_listener('vs', '', function(msg) {
-				var vs_info = window.g_obj_map.get('msg_vs_info');
-				var my_id = window.g_obj_map.get('msg_attrs').get('id');
+				var vs_info = g_obj_map.get('msg_vs_info');
+				var my_id = g_obj_map.get('msg_attrs').get('id');
 				var pos = check_pos(vs_info, my_id);
 				if (!pos) {
 					return;
@@ -1231,7 +1351,7 @@
 					} else if (xdz > 6) {
 						var buttons = get_skill_buttons(xdz);
 						var kee = parseInt(vs_info.get(pos[0] + '_kee' + pos[1]));
-						var max_kee = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
+						var max_kee = parseInt(g_obj_map.get('msg_attrs').get('max_kee'));
 						var kee_percent = kee * 100 / max_kee;
 						var neili = parseInt(vs_info.get(pos[0] + '_force' + pos[1]));
 						var max_neili = parseInt(vs_info.get(pos[0] + '_max_force'
@@ -1297,7 +1417,7 @@
 				}
 			});
 		} else if (cmd == '#team') {
-			console.log('starting auto team combat...');
+			log('starting auto team combat...');
 			var leader, target;
 			add_task_listener(['main_msg', 'vs'], '', function(msg) {
 				if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
@@ -1310,17 +1430,17 @@
 						}
 					}
 				} else if (leader && target && msg.get('type') == 'vs') {
-					var vs_info = window.g_obj_map.get('msg_vs_info');
-					var my_id = window.g_obj_map.get('msg_attrs').get('id');
+					var vs_info = g_obj_map.get('msg_vs_info');
+					var my_id = g_obj_map.get('msg_attrs').get('id');
 					combo_pfm(vs_info, my_id, msg, leader[0]);
 				}
 			});
 		} else if (cmd == '#pk') {
-			console.log('starting auto pvp...');
+			log('starting auto pvp...');
 			var vs_npc1 = false, vs_npc2 = false;
 			add_task_listener('vs', '', function(msg) {
-				var vs_info = window.g_obj_map.get('msg_vs_info');
-				var my_id = window.g_obj_map.get('msg_attrs').get('id');
+				var vs_info = g_obj_map.get('msg_vs_info');
+				var my_id = g_obj_map.get('msg_attrs').get('id');
 				var pos = check_pos(vs_info, my_id);
 				if (!pos) {
 					return;
@@ -1352,18 +1472,8 @@
 					
 				}
 			});
-		} else if (cmd == '#t+ connect' && !connect_trigger) {
-			console.log('open connect trigger...');
-			connect_trigger = add_listener('disconnect', 'change',
-					function(msg) {
-                        execute_cmd('#connect');
-					});
-		} else if (cmd == '#t- connect' && connect_trigger) {
-			console.log('connect trigger closed');
-			remove_listener(connect_trigger);
-			connect_trigger = undefined;
 		} else if (cmd == '#t+ pintu' && !pintu_trigger) {
-			console.log('open pintu trigger...');
+			log('open pintu trigger...');
 			var bad_npc, good_npc;
 			pintu_trigger = add_listener(['channel', 'jh'], '',
 					function(msg) {
@@ -1373,7 +1483,7 @@
 								bad_npc = r[1];
 								good_npc = r[2];
 								var path;
-								var room = window.g_obj_map.get('msg_room');
+								var room = g_obj_map.get('msg_room');
 								if (room && room.get('map_id') == 'changan') {
 									if (room.get('short') == '地室') {
 										path = '';
@@ -1426,24 +1536,24 @@
 						}
 					});
 		} else if (cmd == '#t- pintu' && pintu_trigger) {
-			console.log('pintu trigger closed');
+			log('pintu trigger closed');
 			remove_listener(pintu_trigger);
 			pintu_trigger = undefined;
 		} else if ((cmd == '#t+ taofan' || cmd == '#t+ taofan 1' || cmd == '#t+ taofan 2') && !taofan_trigger) {
-			console.log('open taofan trigger...');
-			var taofan_target = kuafu + (cmd == '#t+ taofan 2' ? '段老大' : '无一'), taofan_id, taofan_start = false;
-			taofan_trigger = add_listener(['channel', 'main_msg', 'jh'], '',
+			log('open taofan trigger...');
+			var taofan_target = kuafu + (cmd == '#t+ taofan 2' ? '段老大' : '无一'), taofan_id, action_state = 0;
+			taofan_trigger = add_listener(['channel', 'main_msg', 'jh', 'vs', 'notice'], '',
 					function(msg) {
-						if (!taofan_start && msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
+						if (msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
 							if (removeSGR(msg.get('msg')).indexOf('【系统】' + kuafu + '段老大慌不择路，逃往了') >= 0) {
 								var r = msg.get('msg').match(/find_qinglong_road\s+(\d+)/);
 								if (r) {
-                                    console.log(new Date().getTime() + ' ' + r[0]);
+                                    console.log(new Date().format("HH:mm:ss") + ' goto taofan ' + r[0]);
                                     clickButton(r[0]);
-                                    taofan_start = true;
+                                    action_state = 1;
 								}
 							}
-						} else if (taofan_start && !taofan_id && msg.get('type') == 'jh') {
+						} else if (action_state == 1 && msg.get('type') == 'jh') {
 							if (msg.get('subtype') == 'info') {
 								for (var i = 1; ; i++) {
 									var npc = msg.get('npc' + i);
@@ -1453,31 +1563,756 @@
 										var s = npc.split(',');
 										if (s.length > 1 && removeSGR(s[1]) == taofan_target) {
 											taofan_id = s[0];
-											console.log(new Date().getTime() + ' find taofan ' + taofan_id);
+											console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
+                                            action_state = 2;
 											break;
 										}
 									}
 								}
 							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == taofan_target) {
 								taofan_id = msg.get('id');
-								clickButton('kill ' + taofan_id);
+								console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
+                                action_state = 2;
 							}
-						} else if (taofan_start && taofan_id && msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+						} else if (action_state == 2 && msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
 							if (removeSGR(msg.get('msg')).indexOf(kuafu + '无一对著' + kuafu + '段老大喝道：「臭贼！今日不是你死就是我活！」') >= 0) {
-								console.log(new Date().getTime() + ' kill ' + taofan_id);
+								console.log(new Date().format("HH:mm:ss") + ' kill ' + taofan_id);
 								clickButton('kill ' + taofan_id);
-								taofan_id = undefined;
-								taofan_start = false;
+								action_state = 3;
 							}
+						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                            var vs_info = g_obj_map.get('msg_vs_info');
+                            var my_id = g_obj_map.get('msg_attrs').get('id');
+                            var pos = check_pos(vs_info, my_id);
+                            if (pos) {
+                                set_attack_target(taofan_id);
+                                var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                                var buttons = get_skill_buttons(xdz);
+                                select_perform(buttons, true);
+                                action_state = 4;
+                            }
+						} else if (action_state == 3 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                            console.log(msg.get('msg'));
+                            action_state = 0;
+						} else if (action_state == 4 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                            action_state = 0;
+                            do_full('home');
 						}
 					});
 		} else if (cmd == '#t- taofan' && taofan_trigger) {
-			console.log('taofan trigger closed');
+			log('taofan trigger closed');
 			remove_listener(taofan_trigger);
 			taofan_trigger = undefined;
+		} else if ((cmd == '#t+ qinglong' || cmd == '#t+ qinglong 1' || cmd == '#t+ qinglong 2') && !qinglong_trigger) {
+			log('open qinglong trigger...');
+            var qinglong_road, qinglong_target, target_id, action_state = 0;
+			qinglong_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '',
+					function(msg) {
+						if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                            var data = removeSGR(msg.get('msg'));
+                            var r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是本大区第(\d+)个跨服青龙。/);
+							if (r) {
+                                if (r[1].indexOf(kuafu) == 0) {
+                                    console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                                    if (qinglong_list.indexOf(r[3]) >= 0) {
+                                        var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                                        if (s) {
+                                            qinglong_road = s[0];
+                                            clickButton(qinglong_road);
+                                            if (cmd == '#t+ qinglong 1') {
+                                                qinglong_target = r[1];
+                                                action_state = 1;
+                                            } else if (cmd == '#t+ qinglong 2') {
+                                                qinglong_target = kuafu + qinglong_npcs.get(removeLink(r[2]));
+                                                action_state = 1;
+                                            }
+                                        }
+                                    }
+                                }
+							} else {
+                                r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是跨服第(\d+)个全服跨服青龙。/);
+                                if (r && r[1].indexOf('[新区]') < 0) {
+                                    console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                                    var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                                    if (s) {
+                                        qinglong_road = s[0];
+                                        clickButton(qinglong_road);
+                                    }
+                                }
+                            }
+						} else if (action_state == 1 && msg.get('type') == 'jh') {
+							if (msg.get('subtype') == 'info') {
+								for (var i = 1; ; i++) {
+									var npc = msg.get('npc' + i);
+									if (!npc) {
+										break;
+									} else {
+										var s = npc.split(',');
+										if (s.length > 1 && removeSGR(s[1]) == qinglong_target) {
+                                            target_id = s[0];
+											clickButton('kill ' + target_id);
+                                            action_state = 2;
+											break;
+										}
+									}
+								}
+							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == qinglong_target) {
+                                target_id = msg.get('id');
+								clickButton('kill ' + target_id);
+                                action_state = 2;
+							}
+						} else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                            set_attack_target(target_id);
+                            action_state = 3;
+						} else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                            console.log(msg.get('msg'));
+                            action_state = 0;
+						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                            action_state = 0;
+                            do_full(qinglong_road);
+                        }
+					});
+		} else if (cmd == '#t- qinglong' && qinglong_trigger) {
+			log('qinglong trigger closed');
+			remove_listener(qinglong_trigger);
+			qinglong_trigger = undefined;
+		} else if ((cmd == '#t+ biaoche' || cmd == '#t+ biaoche 1' || cmd == '#t+ biaoche 2') && !biaoche_trigger) {
+			log('open biaoche trigger...');
+            var biaoche_road, biaoche_target, target_id, action_state = 0;
+			biaoche_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '',
+					function(msg) {
+						if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                            var data = removeSGR(msg.get('msg'));
+                            var r = data.match(/荣威镖局:(.*)押运镖车行至跨服\-(.*)，忽入(.*)埋伏之中，哪位好汉能伸出援手，我荣威镖局必有重谢！/);
+							if (r && r[1].indexOf(kuafu) == 0) {
+                                console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                                var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                                if (s) {
+                                    biaoche_road = s[0];
+                                    clickButton(biaoche_road);
+                                    if (cmd == '#t+ biaoche 1') {
+                                        biaoche_target = r[3];
+                                        action_state = 1;
+                                    } else if (cmd == '#t+ biaoche 2') {
+                                        biaoche_target = r[1];
+                                        action_state = 1;
+                                    }
+                                }
+                            }
+						} else if (action_state == 1 && msg.get('type') == 'jh') {
+							if (msg.get('subtype') == 'info') {
+								for (var i = 1; ; i++) {
+									var npc = msg.get('npc' + i);
+									if (!npc) {
+										break;
+									} else {
+										var s = npc.split(',');
+										if (s.length > 1 && removeSGR(s[1]) == biaoche_target) {
+                                            target_id = s[0];
+											clickButton('kill ' + target_id);
+                                            action_state = 2;
+											break;
+										}
+									}
+								}
+							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == biaoche_target) {
+                                target_id = msg.get('id');
+								clickButton('kill ' + target_id);
+                                action_state = 2;
+							}
+						} else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                            set_attack_target(target_id);
+                            action_state = 3;
+						} else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                            console.log(msg.get('msg'));
+                            action_state = 0;
+						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                            action_state = 0;
+                            do_full(biaoche_road);
+                        }
+					});
+		} else if (cmd == '#t- biaoche' && biaoche_trigger) {
+			log('biaoche trigger closed');
+			remove_listener(biaoche_trigger);
+			biaoche_trigger = undefined;
+		} else if (cmd == '#t+ party' && !party_trigger) {
+			log('open party trigger...');
+            var action, area, rooms, npc, item, current_room, action_state = 0;
+            party_trigger = add_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var data = removeLink(removeSGR(msg.get('msg')));
+                    if (data.indexOf('今天做的师门任务已过量，明天再来。') == 0) {
+                        execute_cmd('#t- party');
+                        return;
+                    }
+                    if (data.indexOf('现在没有任务，好好练功吧！！') >= 0) {
+                        setTimeout(function() {
+                            send_cmd('family_quest');
+                        }, 500);
+                        return;
+                    }
+                    if (/^恭喜你完成师门任务，这是你连续完成的第\d+个师门任务！/.test(data)) {
+                        send_cmd('home;family_quest');
+                        return;
+                    }
+                    if (action_state == 1 && data.indexOf('你自言自语不知道在说些什么') == 0) {
+                        if (rooms.length == 0) {
+                            log('no room found');
+                        } else {
+                            var room = rooms.shift();
+                            var path = current_room ? get_path_to(area, current_room, room) : get_path(area, room);
+                            console.log('path: ' + path);
+                            send_cmd(path + ';say');
+                            current_room = room;
+                            action_state = 2;
+                        }
+                        return;
+                    }
+                    if (action_state == 2 && data.indexOf('你自言自语不知道在说些什么') == 0) {
+                        if (action == '战胜') {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                send_cmd('fight ' + target[0]);
+                                action_state = 3;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else if (action == '杀') {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                send_cmd('kill ' + target[0]);
+                                action_state = 3;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else if (!npc) {
+                            var target = find_target(item, [ 'item' ]);
+                            if (target) {
+                                send_cmd('get ' + target[0] + ';home;give ' + get_master_id());
+                                action_state = 0;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                var sell_list = LIBS.sellers.get(target[0]);
+                                if (sell_list) {
+                                    var item_id = sell_list.get(item);
+                                    if (item_id) {
+                                        send_cmd('buy ' + item_id + ' from ' + target[0] + ';home;give ' + get_master_id());
+                                        action_state = 0;
+                                    } else {
+                                        send_cmd('kill ' + target[0]);
+                                        action_state = 4;
+                                    }
+                                } else {
+                                    send_cmd('kill ' + target[0]);
+                                    action_state = 4;
+                                }
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        }
+                        return;
+                    }
+                    var r = data.match(/^.+道：给我在.+内(战胜|杀|寻找)(.+)。\n任务所在地方好像是：(.+)\n你已经连续完成了\d+个任务。\n你今天已完成(\d+)\/(\d+)个任务。$/m);
+                    if (!r) {
+                        r = data.match(/^你现在的任务是(战胜|杀|寻找)(.+)。\n任务所在地方好像是：(.+)\n你还剩下.+去完成。\n你已经连续完成了\d+个任务。\n你今天已完成(\d+)\/(\d+)个任务。$/m);
+                    }
+                    if (r) {
+                        action_state = 0;
+                        action = r[1];
+                        var target = r[2];
+                        var place = r[3];
+                        if (parseInt(r[4]) + 1 == parseInt(r[5])) {
+                            send_cmd('vip finish_family');
+                        }
+                        var arr = place.split('-');
+                        if (/^\*.+\*$/.test(arr[1])) {
+                            arr.splice(1,1);
+                        }
+                        var map = arr[0];
+                        var room = $.trim(arr[1]);
+                        if (action == '寻找') {
+                            npc = arr.length > 2 ? $.trim(arr[2]) : null;
+                            item = $.trim(target);
+                        } else {
+                            npc = $.trim(target);
+                            item = null;
+                        }
+                        var spec = false;
+                        if (map == '华山村' && npc == '黑狗') {
+                            spec = true;
+                        } else if (map == '全真教' && npc == '小道童') {
+                            spec = true;
+                        } else if (map == '古墓' && npc == '玉蜂') {
+                            spec = true;
+                        } else if (map == '大旗门' && npc == '宾奴') {
+                            spec = true;
+                        } else if (map == '大昭寺' && npc == '护寺藏尼') {
+                            spec = true;
+                        } else if (map == '桃花岛' && npc == '桃花岛弟子') {
+                            spec = true;
+                        } else if (map == '大理' && (npc == '采笋人' || npc == '农夫' || npc == '台夷商贩"')) {
+                            spec = true;
+                        }
+                        area = get_area(map);
+                        if (!area) {
+                            log('map not found: ' + map);
+                            return;
+                        }
+                        rooms = npc ? find_rooms_by_npc(area, npc) : find_rooms_by_item(area, item);
+                        if (spec) {
+                            for (var i = rooms.length - 1; i >= 0; i--) {
+                                if (rooms[i].name != room) {
+                                    rooms.splice(i, 1);
+                                }
+                            }
+                        }
+                        if (rooms.length == 0) {
+                            log('room not found: ' + room);
+                            return;
+                        }
+                        send_cmd('say');
+                        current_room = undefined;
+                        action_state = 1;
+                    }
+                } else if ((action_state == 3 || action_state == 4) && msg.get('type') == 'vs') {
+                    var vs_info = g_obj_map.get('msg_vs_info');
+                    var my_id = g_obj_map.get('msg_attrs').get('id');
+                    var pos = check_pos(vs_info, my_id);
+                    if (!pos) {
+                        send_cmd('escape;say');
+                        action_state = 1;
+                        return;
+                    }
+                    if (msg.get('subtype') == 'add_xdz' && msg.get('uid') == my_id) {
+                        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                        var buttons = get_skill_buttons(xdz);
+                        if (!select_perform(buttons, true)) {
+                            send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
+                        }
+                    }
+                } else if (action_state == 4 && msg.get('type') == 'jh' && msg.get('subtype') == 'new_item') {
+                    if (removeSGR(msg.get('name')) == npc + '的尸体') {
+                        send_cmd('get ' + msg.get('id') + ';home;give ' + get_master_id());
+                    }
+                }
+            });
+		} else if (cmd == '#t- party' && party_trigger) {
+			log('party trigger closed');
+			remove_listener(party_trigger);
+			party_trigger = undefined;
+ 		} else if (cmd == '#t+ guild' && !guild_trigger) {
+			log('open guild trigger...');
+            var action, area, rooms, npc, item, current_room, action_state = 0;
+            guild_trigger = add_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var data = removeLink(removeSGR(msg.get('msg')));
+                    if (data.indexOf('今天做的帮派任务已过量，明天再来。') == 0) {
+                        execute_cmd('#t- guild');
+                        return;
+                    }
+                    if (data.indexOf('现在没有任务，好好练功吧！！') >= 0) {
+                        setTimeout(function() {
+                            send_cmd('clan task');
+                        }, 500);
+                        return;
+                    }
+                    if (/^恭喜你完成帮派任务，这是你连续完成的第\d+个帮派任务！/.test(data)) {
+                        send_cmd('clan scene;clan task');
+                        return;
+                    }
+                    if (action_state == 1 && data.indexOf('你自言自语不知道在说些什么') == 0) {
+                        if (rooms.length == 0) {
+                            log('no room found');
+                        } else {
+                            var room = rooms.shift();
+                            var path = current_room ? get_path_to(area, current_room, room) : get_path(area, room);
+                            console.log('path: ' + path);
+                            send_cmd(path + ';say');
+                            current_room = room;
+                            action_state = 2;
+                        }
+                        return;
+                    }
+                    if (action_state == 2 && data.indexOf('你自言自语不知道在说些什么') == 0) {
+                        if (action == '战胜') {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                send_cmd('fight ' + target[0]);
+                                action_state = 3;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else if (action == '杀') {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                send_cmd('kill ' + target[0]);
+                                action_state = 3;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else if (!npc) {
+                            var target = find_target(item, [ 'item' ]);
+                            if (target) {
+                                send_cmd('get ' + target[0] + ';clan scene;clan submit_task');
+                                action_state = 0;
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        } else {
+                            var target = find_target(npc, [ 'npc' ]);
+                            if (target) {
+                                var sell_list = LIBS.sellers.get(target[0]);
+                                if (sell_list) {
+                                    var item_id = sell_list.get(item);
+                                    if (item_id) {
+                                        send_cmd('buy ' + item_id + ' from ' + target[0] + ';clan scene;clan submit_task');
+                                        action_state = 0;
+                                    } else {
+                                        send_cmd('kill ' + target[0]);
+                                        action_state = 4;
+                                    }
+                                } else {
+                                    send_cmd('kill ' + target[0]);
+                                    action_state = 4;
+                                }
+                            } else {
+                                send_cmd('say');
+                                action_state = 1;
+                            }
+                        }
+                        return;
+                    }
+                    var r = data.match(/^帮派使者：给我在.+内(战胜|杀|寻找)(.+)。\n任务所在地方好像是：(.+)\n你已经连续完成了\d+个任务。\n你今天已完成(\d+)\/(\d+)个任务。$/m);
+                    if (!r) {
+                        r = data.match(/^你现在的任务是(战胜|杀|寻找)(.+)。\n任务所在地方好像是：(.+)\n你还剩下.+去完成。\n你已经连续完成了\d+个任务。\n你今天已完成(\d+)\/(\d+)个任务。$/m);
+                    }
+                    if (r) {
+                        action_state = 0;
+                        action = r[1];
+                        var target = r[2];
+                        var place = r[3];
+                        if (parseInt(r[4]) + 1 == parseInt(r[5])) {
+                            send_cmd('vip finish_clan');
+                        }
+                        var arr = place.split('-');
+                        if (/^\*.+\*$/.test(arr[1])) {
+                            arr.splice(1,1);
+                        }
+                        var map = arr[0];
+                        var room = $.trim(arr[1]);
+                        if (action == '寻找') {
+                            npc = arr.length > 2 ? $.trim(arr[2]) : null;
+                            item = $.trim(target);
+                        } else {
+                            npc = $.trim(target);
+                            item = null;
+                        }
+                        var spec = false;
+                        if (map == '华山村' && npc == '黑狗') {
+                            spec = true;
+                        } else if (map == '全真教' && npc == '小道童') {
+                            spec = true;
+                        } else if (map == '古墓' && npc == '玉蜂') {
+                            spec = true;
+                        } else if (map == '大旗门' && npc == '宾奴') {
+                            spec = true;
+                        } else if (map == '大昭寺' && npc == '护寺藏尼') {
+                            spec = true;
+                        } else if (map == '桃花岛' && npc == '桃花岛弟子') {
+                            spec = true;
+                        } else if (map == '大理' && (npc == '采笋人' || npc == '农夫' || npc == '台夷商贩"')) {
+                            spec = true;
+                        }
+                        area = get_area(map);
+                        if (!area) {
+                            log('map not found: ' + map);
+                            return;
+                        }
+                        rooms = npc ? find_rooms_by_npc(area, npc) : find_rooms_by_item(area, item);
+                        if (spec) {
+                            for (var i = rooms.length - 1; i >= 0; i--) {
+                                if (rooms[i].name != room) {
+                                    rooms.splice(i, 1);
+                                }
+                            }
+                        }
+                        if (rooms.length == 0) {
+                            log('room not found: ' + room);
+                            return;
+                        }
+                        send_cmd('say');
+                        current_room = undefined;
+                        action_state = 1;
+                    }
+                } else if ((action_state == 3 || action_state == 4) && msg.get('type') == 'vs') {
+                    var vs_info = g_obj_map.get('msg_vs_info');
+                    var my_id = g_obj_map.get('msg_attrs').get('id');
+                    var pos = check_pos(vs_info, my_id);
+                    if (!pos) {
+                        send_cmd('escape;say');
+                        action_state = 1;
+                        return;
+                    }
+                    if (msg.get('subtype') == 'add_xdz' && msg.get('uid') == my_id) {
+                        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                        var buttons = get_skill_buttons(xdz);
+                        if (!select_perform(buttons, true)) {
+                            send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
+                        }
+                    }
+                } else if (action_state == 4 && msg.get('type') == 'jh' && msg.get('subtype') == 'new_item') {
+                    if (removeSGR(msg.get('name')) == npc + '的尸体') {
+                        send_cmd('get ' + msg.get('id') + ';clan scene;clan submit_task');
+                    }
+                }
+            });
+		} else if (cmd == '#t- guild' && guild_trigger) {
+			log('guild trigger closed');
+			remove_listener(guild_trigger);
+			guild_trigger = undefined;
+ 		} else if (cmd == '#t+ task' && !task_trigger) {
+			log('open task trigger...');
+            var go_npc_patterns = [
+                /^(.+)道：上次我不小心，竟然吃了(.+)\-(.+)的亏，.+去杀了.?！/,
+                /^(.+)道：(.+)\-(.+)竟对我横眉瞪眼的，真想杀掉.?！/,
+                /^(.+)道：(.+)\-(.+)昨天捡到了我几十辆银子，拒不归还。钱是小事，但人品可不好。.+去杀了.?！/,
+                /^(.+)道：我十分讨厌那(.+)\-(.+)，.+替我去教训教训.?罢！/,
+                /^(.+)道：(.+)\-(.+)竟敢得罪我，.+去让.?尝尝厉害吧！/,
+                /^(.+)道：(.+)\-(.+)十分嚣张，去让.?见识见识厉害！/,
+                /^(.+)道：(.+)\-(.+)好大胆，竟敢拿走了我的.+，去替我要回来可好？/,
+                /^(.+)道：我有个.+被(.+)\-(.+)抢走了，去替我要回来吧！/,
+                /^(.+)道：我有个事情想找(.+)\-(.+)，.+可否替我走一趟？/,
+                /^(.+)道：我想找(.+)\-(.+)商量一点事情，.+替我找一下？/,
+                /^(.+)道：(.+)\-(.+)看上去好生奇怪，.+可前去打探一番。/,
+                /^(.+)道：(.+)\-(.+)鬼鬼祟祟的叫人生疑，.+去打探打探情况。/
+            ];
+            var go_room_patterns = [
+                /^(.+)道：我将.+藏在了(.+)\-(.+)，.+可前去寻找。/
+            ];
+            var find_item_patterns = [
+                /^(.+)道：突然想要一.?(.+)，.+可否帮忙找来？/,
+                /^(.+)道：唉，好想要一.?(.+)啊。/
+            ];
+            var back_npc_patterns = [
+                /^.+脚一蹬，死了。现在可以回去找(.+)交差了。/,
+                /^.+说道：好，好，好，我知错了……你回去转告(.+)吧。/,
+                /^.+说道：好，我知道了。你回去转告(.+)吧。/,
+                /^.+老老实实将东西交了出来，现在可以回去找(.+)交差了。/,
+                /^你一番打探，果然找到了一些线索，回去告诉(.+)吧。/,
+                /^你一番搜索，果然找到了，回去告诉(.+)吧。/
+            ];
+            var _create_link = function(path, label, is_back) {
+                var link = '<span style="color:red;">[<a style="text-decoration:underline;color:red;" href="javascript:send_cmd(\''
+                        + path + '\', 0);">GO</a>]</span>';
+                if (label) {
+                    var $e = $('#out2 span.out2:last a');
+                    if (!is_back) {
+                        $e = $($e.get().reverse());
+                    }
+                    $e.each(function() {
+                        var t = $(this).text();
+                        if (t.indexOf('-') >= 0) {
+                            t = t.substring(t.indexOf('-') + 1);
+                        }
+                        if (t == label) {
+                            $(this).after(link);
+                            return false;
+                        }
+                    });
+                } else {
+                    $('#out2 span.out2:last span').append(link);
+                }
+            };
+            var tasks = new Map(), action_state = 0;
+            task_trigger = add_listener(['main_msg', 'notice'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var data = removeLink(removeSGR(msg.get('msg')));
+                    var r = data.match(/^完成谜题\((\d+)\/(\d+)\)：(.+)的谜题，获得：\n经验x(\d+)\n潜能x(\d+)\n银两x(\d+)/m);
+                    if (r) {
+                        var path = tasks.get(r[3]);
+                        if (path) {
+                            _create_link(path);
+                            tasks.remove(r[3]);
+                        }
+                        return;
+                    }
+                    if (/^\[谜题/.test(data)) {
+                        return;
+                    }
+                    for (var i = 0; i < go_npc_patterns.length; i++) {
+                        r = data.match(go_npc_patterns[i]);
+                        if (r) {
+                            if (r[1] != '一个声音说') {
+                                var area = get_area_by_mapid(get_map_id());
+                                if (area) {
+                                    var room = get_room_by_npc(area, get_room_name(), r[1]);
+                                    if (room) {
+                                        var path = get_path(area, room);
+                                        tasks.put(r[1], path);
+                                        _create_link(path, r[1], true);
+                                    }
+                                }
+                            }
+                            var area = get_area(r[2]);
+                            if (area) {
+                                var rooms = find_rooms_by_npc(area, r[3]);
+                                if (rooms.length > 0) {
+                                    var path = get_path(area, rooms[0]);
+                                    _create_link(path, r[3]);
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    for (var i = 0; i < go_room_patterns.length; i++) {
+                        r = data.match(go_room_patterns[i]);
+                        if (r) {
+                            if (r[1] != '一个声音说') {
+                                var area = get_area_by_mapid(get_map_id());
+                                if (area) {
+                                    var room = get_room_by_npc(area, get_room_name(), r[1]);
+                                    if (room) {
+                                        var path = get_path(area, room);
+                                        tasks.put(r[1], path);
+                                        _create_link(path, r[1], true);
+                                    }
+                                }
+                            }
+                            var area = get_area(r[2]);
+                            if (area) {
+                                var rooms = find_rooms(area, r[3]);
+                                if (rooms.length > 0) {
+                                    var path = get_path(area, rooms[0]);
+                                    _create_link(path, r[3]);
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    for (var i = 0; i < find_item_patterns.length; i++) {
+                        r = data.match(find_item_patterns[i]);
+                        if (r) {
+                            var area = get_area_by_mapid(get_map_id());
+                            if (r[1] != '一个声音说') {
+                                if (area) {
+                                    var room = get_room_by_npc(area, get_room_name(), r[1]);
+                                    if (room) {
+                                        var path = get_path(area, room);
+                                        tasks.put(r[1], path);
+                                        _create_link(path, r[1], true);
+                                    }
+                                }
+                            }
+                            if (area) {
+                                var list = [area];
+                                var j = area.index;
+                                area = get_area_by_index(j - 1);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j + 1);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j - 2);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j + 2);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j - 3);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j + 3);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j - 4);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                area = get_area_by_index(j + 4);
+                                if (area) {
+                                    list.push(area);
+                                }
+                                for (var k = 0; k < list.length; k++) {
+                                    area = list[k];
+                                    var rooms = find_rooms_by_item(area, r[2], true);
+                                    if (rooms.length > 0) {
+                                        var path = get_path(area, rooms[0]);
+                                        _create_link(path, r[2]);
+                                        break;
+                                    }
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    for (var i = 0; i < back_npc_patterns.length; i++) {
+                        r = data.match(back_npc_patterns[i]);
+                        if (r) {
+                            var path = tasks.get(r[1]);
+                            if (path) {
+                                _create_link(path, r[1], true);
+                            }
+                            return;
+                        }
+                    }
+                } else if (msg.get('type') == 'notice') {
+                    if (msg.get('msg').indexOf('清空谜题任务成功。') == 0) {
+                        tasks.clear();
+                        return;
+                    }
+                }
+            });
+		} else if (cmd == '#t- task' && task_trigger) {
+			log('task trigger closed');
+			remove_listener(task_trigger);
+			task_trigger = undefined;
+		} else if (cmd == '#mapid') {
+            var room = g_obj_map.get('msg_room');
+            if (room && room.get('map_id')) {
+                log('map id: ' + room.get('map_id'));
+            } else {
+                log('no map id');
+            }
+		} else if (cmd == '#heal') {
+            do_full();
+		} else if (cmd == '#t+ connect' && !connect_trigger) {
+			log('open connect trigger...');
+			connect_trigger = add_listener('disconnect', 'change',
+					function(msg) {
+                        execute_cmd('#connect');
+					});
+		} else if (cmd == '#t- connect' && connect_trigger) {
+			log('connect trigger closed');
+			remove_listener(connect_trigger);
+			connect_trigger = undefined;
 		} else if (cmd == '#connect') {
             g_delay_connect = 0;
             connectServer();
+		} else if (cmd.substr(0, 8) == '#resize ') {
+            var r = $.trim(cmd.substr(8)).match(/(\d+)\s+(\d+)/);
+            if (r) {
+                resizeTo(parseInt(r[1]), parseInt(r[2]));
+            }
 		} else if (cmd.substr(0, 7) == '#alias ') {
 			var alias = $.trim(cmd.substr(7));
 			var key, value, i = alias.indexOf(' ');
@@ -1491,12 +2326,12 @@
 			if (value) {
 				if (value != aliases.get(key)) {
 					aliases.put(key, value);
-					console.log("set alias ok.");
+					log("set alias ok.");
 				}
 			} else {
 				if (aliases.containsKey(key)) {
 					aliases.remove(key);
-					console.log("alias removed.");
+					log("alias removed.");
 				}
 			}
 		} else if (cmd.substr(0, 1) == '#') {
@@ -1531,7 +2366,7 @@
 		if (subtype == 'add_xdz'
 				|| (subtype == 'attack' && msg.get('rid') == my_id)) {
 			var kee = parseInt(vs_info.get(pos[0] + '_kee' + pos[1]));
-			var max_kee = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
+			var max_kee = parseInt(g_obj_map.get('msg_attrs').get('max_kee'));
 			if (kee * 100 / max_kee < 50) {
 				var xdz = parseInt(vs_info
 						.get(pos[0] + '_xdz' + pos[1]));
@@ -1561,7 +2396,7 @@
 		if (subtype == 'add_xdz'
 				|| (subtype == 'attack' && msg.get('rid') == my_id)) {
 			var kee = parseInt(vs_info.get(pos[0] + '_kee' + pos[1]));
-			var max_kee = parseInt(window.g_obj_map.get('msg_attrs').get('max_kee'));
+			var max_kee = parseInt(g_obj_map.get('msg_attrs').get('max_kee'));
 			if (kee * 100 / max_kee < 50) {
 				var xdz = parseInt(vs_info
 						.get(pos[0] + '_xdz' + pos[1]));
@@ -1581,7 +2416,7 @@
 			var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
 			var buttons = get_skill_buttons(xdz);
 			var pfm = removeSGR(msg.get('name'));
-			var pfms = skills.get(pfm);
+			var pfms = LIBS.power_skills.get(pfm);
 			if (pfms) {
 				for ( var i = 0; i < buttons.length; i++) {
 					if (buttons[i] && pfms.indexOf(buttons[i]) >= 0) {
@@ -1591,13 +2426,329 @@
 				}
 			}
 			for ( var i = 0; i < buttons.length; i++) {
-				if (buttons[i] && skills.containsKey(buttons[i])) {
+				if (buttons[i] && LIBS.power_skills.containsKey(buttons[i])) {
 					clickButton('playskill ' + (i + 1));
 					break;
 				}
 			}
 		}
 	}
+    function do_recovery(callback) {
+        send_cmd('jh 1;e;n;n;n;w;attrs;say');
+        var action_state = 1, heal_count = 0, dodge_count = 0;
+        add_task_listener(['main_msg', 'vs'], '', function(msg) {
+            if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text' && msg.get('msg').indexOf('你自言自语不知道在说些什么') == 0) {
+                if (action_state == 0 || action_state == 1) {
+                    var attrs = g_obj_map.get('msg_attrs');
+                    var force = parseInt(attrs.get('force'));
+                    var max_force = parseInt(attrs.get('max_force'));
+                    console.log('force: ' + force);
+                    if (max_force - force >= 5000) {
+                        var n = Math.floor((max_force - force) / 5000 + 1);
+                        var cmds = '';
+                        for (var i = 0; i < Math.min(n, 3); i++) {
+                            cmds += 'buy /map/snow/obj/qiannianlingzhi from snow_herbalist;items use snow_qiannianlingzhi;';
+                        }
+                        cmds += 'attrs;say';
+                        send_cmd(cmds);
+                    } else {
+                        console.log('check force ok');
+                        if (action_state == 1) {
+                            send_cmd('e;s;s;s;say');
+                            action_state = 2;
+                        } else {
+                            var check_ok = false;
+                            for (var i = 1; i <= 4; i++) {
+                                var button = g_obj_map.get('skill_button' + i);
+                                if (button) {
+                                    var skill = removeSGR(button.get('name'));
+                                    if (skill == '万流归一' || skill == '幽影幻虚步') {
+                                        check_ok = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (check_ok) {
+                                send_cmd('e;s;s;s;fight snow_worker');
+                                action_state = 4;
+                            } else {
+                                stop_task('finish!');
+                                if (callback) {
+                                    if (typeof callback === 'function') {
+                                        callback();
+                                    } else {
+                                        execute_cmd(callback);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (action_state == 2) {
+                    var attrs = g_obj_map.get('msg_attrs');
+                    var force = parseInt(attrs.get('force'));
+                    if (force > 0) {
+                        var kee = parseInt(attrs.get('kee'));
+                        var max_kee = parseInt(attrs.get('max_kee'));
+                        if (kee * 100 / max_kee < 80) {
+                            send_cmd('fight snow_worker');
+                            action_state = 3;
+                        } else if (kee < max_kee) {
+                            send_cmd('recovery;recovery;recovery;recovery;recovery;attrs;say');
+                        } else {
+                            console.log('check kee ok');
+                            send_cmd('n;n;n;w;say');
+                            action_state = 0;
+                        }
+                    } else {
+                        console.log('no force');
+                        send_cmd('n;n;n;w;say');
+                        action_state = 1;
+                    }
+                }
+            } else if (action_state == 3 && msg.get('type') == 'vs') {
+                var vs_info = g_obj_map.get('msg_vs_info');
+                var my_id = g_obj_map.get('msg_attrs').get('id');
+                var pos = check_pos(vs_info, my_id);
+                if (!pos) {
+                    stop_task('failed to fight');
+                    return;
+                }
+                var subtype = msg.get('subtype');
+                if (subtype == 'combat_result') {
+                    heal_count = 0;
+                    send_cmd('attrs;say');
+                    action_state = 2;
+                } else if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
+                    var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                    var buttons = get_skill_buttons(xdz);
+                    for (var i = 0; i < force_skills.length; i++) {
+                        var k = $.inArray(force_skills[i], buttons);
+                        if (k >= 0) {
+                            send_cmd('playskill ' + (k + 1));
+                            break;
+                        }
+                    }
+                    var kee = parseInt(vs_info.get(pos[0] + '_kee' + pos[1]));
+                    var max_kee = parseInt(g_obj_map.get('msg_attrs').get('max_kee'));
+                    if (kee * 100 / max_kee >= 80) {
+                        send_cmd('escape');
+                    }
+                } else if (subtype == 'playskill' && parseInt(msg.get('ret')) == 0 && msg.get('uid') == my_id) {
+                    if (++heal_count >= 3) {
+                        send_cmd('escape');
+                    }
+                }
+            } else if (action_state == 4 && msg.get('type') == 'vs') {
+                var vs_info = g_obj_map.get('msg_vs_info');
+                var my_id = g_obj_map.get('msg_attrs').get('id');
+                var pos = check_pos(vs_info, my_id);
+                if (!pos) {
+                    stop_task('failed to fight');
+                    return;
+                }
+                var subtype = msg.get('subtype');
+                if (subtype == 'combat_result') {
+                    if (dodge_count < 3) {
+                        send_cmd('fight snow_worker');
+                    } else {
+                        console.log('dodge ok');
+                        stop_task('finish!');
+                        if (callback) {
+                            if (typeof callback === 'function') {
+                                callback();
+                            } else {
+                                execute_cmd(callback);
+                            }
+                        }
+                    }
+                } else if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
+                    var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                    var buttons = get_skill_buttons(xdz);
+                    for (var i = 0; i < buttons.length; i++) {
+                        if (buttons[i] == '万流归一' || buttons[i] == '幽影幻虚步') {
+                            send_cmd('playskill ' + (i + 1));
+                            break;
+                        }
+                    }
+                } else if (subtype == 'playskill' && parseInt(msg.get('ret')) == 0 && msg.get('uid') == my_id) {
+                    dodge_count++;
+                }
+            }
+        });
+    }
+    function do_full(callback) {
+        send_cmd('attrs');
+        todo(function() {
+            var attrs = g_obj_map.get('msg_attrs');
+            var force = parseInt(attrs.get('force'));
+            var max_force = parseInt(attrs.get('max_force'));
+            var kee = parseInt(attrs.get('kee'));
+            var max_kee = parseInt(attrs.get('max_kee'));
+            if (kee < max_kee || max_force - force >= 5000) {
+                do_recovery(callback);
+            } else {
+                log('hp and force is full');
+            }
+        });
+    }
+    function get_area(name) {
+        if (name == '光明顶') {
+            name = '明教';
+        } else if (name == '白驼山') {
+            name = '白驮山';
+        } else if (name == '梅庄') {
+            name = '寒梅庄';
+        } else if (name == '铁血大旗门') {
+            name = '大旗门';
+        } else if (name == '黑木崖') {
+            name = '魔教';
+        }
+        return LIBS.maps.get(name);
+    }
+    function get_area_by_index(index) {
+        var list = LIBS.maps.values();
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].index == index) {
+                return list[i];
+            }
+        }
+        return null;
+    }
+    function get_area_by_mapid(mapid) {
+        var i = LIBS.mapids.indexOf(mapid);
+        if (i >= 0) {
+            return get_area_by_index(i - 1);
+        }
+        return null;
+    }
+    function find_rooms(area, name) {
+        var rooms = [];
+        for (var i = 0; i < area.rooms.length; i++) {
+            var room = area.rooms[i];
+            if (room.name == name) {
+                rooms.push(room);
+            }
+        }
+        return rooms;
+    }
+    function get_room_by_npc(area, name, npc) {
+        var rooms = find_rooms(area, name);
+        for (var i = 0; i < rooms.length; i++) {
+            var room = rooms[i];
+            var check_ok = false;
+            for (var j = 0; j < room.npc.length; j++) {
+                if (room.npc[j].name == npc) {
+                    return room;
+                }
+            }
+        }
+        return null;
+    }
+    function find_rooms_by_npc(area, name) {
+        var rooms = [];
+        for (var i = 0; i < area.rooms.length; i++) {
+            var room = area.rooms[i];
+            var check_ok = false;
+            for (var j = 0; j < room.npc.length; j++) {
+                if (room.npc[j].name == name) {
+                    check_ok = true;
+                    break;
+                }
+            }
+            if (check_ok) {
+                rooms.push(room);
+            }
+        }
+        return rooms;
+    }
+    function find_rooms_by_item(area, name, check_npc) {
+        var rooms = [];
+        for (var i = 0; i < area.rooms.length; i++) {
+            var room = area.rooms[i];
+            var check_ok = false;
+            for (var j = 0; j < room.items.length; j++) {
+                if (room.items[j] == name) {
+                    check_ok = true;
+                    break;
+                }
+            }
+            if (!check_ok && check_npc) {
+                for (var j = 0; j < room.npc.length; j++) {
+                    for (var k = 0; k < room.npc[j].items.length; k++) {
+                        if (room.npc[j].items[k] == name) {
+                            check_ok = true;
+                            break;
+                        }
+                    }
+                    if (check_ok) {
+                        break;
+                    }
+                }
+            }
+            if (check_ok) {
+                rooms.push(room);
+            }
+        }
+        return rooms;
+    }
+    function get_path(area, to) {
+        var path = to.forward;
+        for (var i = to.prev; i > 0;) {
+            var room = area.rooms[i - 1];
+            path = room.forward + ';' + path;
+            i = room.prev;
+        }
+        return path;
+    }
+    function _get_all_prev(area, room) {
+        var path = [];
+        for (var i = room.prev; i > 0;) {
+            path.push(i);
+            i = area.rooms[i - 1].prev;
+        }
+        return path;
+    }
+    function get_path_to(area, from, to) {
+        var list = _get_all_prev(area, from);
+        list.unshift(area.rooms.indexOf(from) + 1);
+        var path = to.forward;
+        for (var i = to.prev; i > 0;) {
+            if (list.indexOf(i) >= 0) {
+                for (var j = 0; j < list.indexOf(i); j++) {
+                    var room = area.rooms[list[j] - 1];
+                    path = room.backward + ';' + path;
+                }
+                break;
+            }
+            var room = area.rooms[i - 1];
+            path = room.forward + ';' + path;
+            i = room.prev;
+        }
+        return path;
+    }
+    function get_master_id() {
+        var attrs = g_obj_map.get('msg_attrs');
+        return attrs.get('master_id');
+    }
+    function get_map_id() {
+        var room = g_obj_map.get('msg_room');
+        if (room && room.get('map_id')) {
+            var map_id = room.get('map_id');
+            if (LIBS.submaps.containsKey(map_id)) {
+                return LIBS.submaps.get(map_id);
+            } else {
+                return map_id;
+            }
+        }
+        return null;
+    }
+    function get_room_name() {
+        var room = g_obj_map.get('msg_room');
+        if (room) {
+            return removeSGR(room.get('short'));
+        }
+        return null;
+    }
 /*	var hongbao_h_listener, hongbao_list = [], hongbao_timer, hongbao_full1 = false, hongbao_full2 = false;
 	hongbao_h_listener = add_listener(['channel', 'notice'], '',
 			function(msg) {
@@ -1735,7 +2886,7 @@
 				args[1] = target[0];
 			}
 		} else if (args[0] == 'loot') {
-			var room = window.g_obj_map.get('msg_room');
+			var room = g_obj_map.get('msg_room');
 			if (room) {
 				args[1] = '';
 				for ( var t, i = 1; (t = room.get('item' + i)) != undefined; i++) {
@@ -1756,7 +2907,7 @@
 				|| args[0] == 'down') {
 			args[1] = args[0];
 			args[0] = 'go';
-			var room = window.g_obj_map.get('msg_room');
+			var room = g_obj_map.get('msg_room');
 			if (room) {
 				var random = room.get('go_random');
 				if (random) {
@@ -1802,7 +2953,7 @@
 	}
 	var cmd_queue = [];
 	var cmd_busy = false;
-	function send_cmd(cmd, k) {
+	window.send_cmd = function(cmd, k) {
 		cmd_queue = cmd_queue.concat(cmd.split(';'));
 		if (!cmd_busy) {
 			_send_cmd(k);
@@ -2010,7 +3161,7 @@
 	var _show_npc = window.gSocketMsg2.show_npc;
 	window.gSocketMsg2.show_npc = function() {
 		_show_npc.apply(this, arguments);
-		var id = window.g_obj_map.get('msg_npc').get('id');
+		var id = g_obj_map.get('msg_npc').get('id');
 		if (qixia_id_pattern.test(id)) {
 			var cmd = 'ask ' + id + '\\n' + 'ask ' + id + '\\n' + 'ask ' + id
 					+ '\\n' + 'ask ' + id + '\\n' + 'ask ' + id;
@@ -2043,6 +3194,6 @@
 			}
 		}
 	};
-	notify_fail('addon loaded');
+	log('addon loaded');
     }, 1000);
 })(unsafeWindow);
