@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.01
+// @version      1.1.0.02
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -9,7 +9,7 @@
 // @match        http://sword-server1.yytou.cn/*
 // @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
-// @require      https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian-lib.js#v4
+// @require      https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian-lib.js#v5
 // @grant        unsafeWindow
 // ==/UserScript==
 // v1.0.0.02 2018.05.24 增加逃犯的触发器#t+ taofan
@@ -24,6 +24,7 @@
 // v1.0.0.12 2018.06.04 增加自动重连的触发器#t+ connect
 // v1.1.0.00 2018.06.07 增加了#t+ qinglong #t+ biaoche #t+ party #t+ guild #t+ task #question #heal等功能
 // v1.1.0.01 2018.06.07 改进#t+ pintu，增加#t+ snoop
+// v1.1.0.02 2018.06.08 增加自动每日#daily
 
 (function(window) {
     'use strict';
@@ -356,11 +357,18 @@
         _dispatch_message(msg);
         console.log(text);
     }
-	var _click_button = window.clickButton;
+	var _click_button = window.clickButton, echo = false;
 	window.clickButton = function(cmd, k) {
 		if (cmd.substr(0, 1) == '#') {
 			execute_cmd(cmd);
 		} else {
+            if (echo && cmd) {
+                var msg = new Map();
+                msg.put('type', 'main_msg');
+                msg.put('ctype', 'text');
+                msg.put('msg', HIY + cmd.replace(/\n/g, ';'));
+                _dispatch_message(msg);
+            }
 			_click_button.apply(this, arguments);
 		}
 	};
@@ -1082,7 +1090,7 @@
         }, true);
         send_cmd('say');
     }
-	function execute_cmd(cmd) {
+	window.execute_cmd = function(cmd) {
 		if (cmd.substr(0, 6) == '#loop ') {
 			cmd = $.trim(cmd.substr(6));
 			if (cmd) {
@@ -1285,41 +1293,9 @@
 		} else if (cmd == '#question') {
             log('starting auto answer question...');
 			add_task_listener('show_html_page', '', function(msg) {
-				var data = msg.get('msg');
-                if (data) {
-                    var r = data.match(/知识问答第\s*(\d+)\s*\/\s*(\d+)\s*题/);
-                    if (r) {
-                        var count = parseInt(r[1]);
-                        var total = parseInt(r[2]);
-                        if (data.indexOf('回答正确！') >= 0) {
-                            if (count < total) {
-                                send_cmd('question');
-                            } else {
-                                stop_task('finish!');
-                            }
-                        } else if (data.indexOf('回答错误！') >= 0) {
-                            log('answer is wrong!');
-                            if (count >= total) {
-                                stop_task('finish!');
-                            }
-                       } else {
-                            var answer;
-                            var q = LIBS.questions.keys();
-                            for (var i in q) {
-                                var k = q[i];
-                                if (data.indexOf(k) >= 0) {
-                                    answer = LIBS.questions.get(k);
-                                    break;
-                                }
-                            }
-                            if (answer) {
-                                send_cmd('question ' + answer);
-                            } else {
-                                log('answer not found!');
-                            }
-                        }
-                    }
-                }
+				do_answer(msg, function() {
+                    stop_task('finish!');
+                });
 			});
             send_cmd('question');
 		} else if (cmd == '#combat') {
@@ -2207,7 +2183,7 @@
                         }
                     });
                 } else {
-                    $('#out2 span.out2:last span').append(link);
+                    $('#out2 span.out2:last').append(link);
                 }
             };
             var tasks = new Map(), action_state = 0;
@@ -2390,7 +2366,194 @@
             } else {
                 log('no map id');
             }
-		} else if (cmd == '#heal') {
+		} else if (cmd == '#daily') {
+            log('start auto daily...');
+            var action_state = 0;
+            add_task_listener(['main_msg', 'look_npc', 'jh', 'vs', 'show_html_page', 'notice'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text' && msg.get('msg').indexOf('你自言自语不知道在说些什么') == 0) {
+                    if (action_state == 1) {
+                        var cmds = [];
+                        cmds.push('work click maikuli');
+                        cmds.push('work click duancha');
+                        cmds.push('work click dalie');
+                        cmds.push('work click baobiao');
+                        cmds.push('work click maiyi');
+                        cmds.push('work click xuncheng');
+                        cmds.push('work click datufei');
+                        cmds.push('work click dalei');
+                        cmds.push('work click kangjijinbin');
+                        cmds.push('work click zhidaodiying');
+                        cmds.push('work click dantiaoqunmen');
+                        cmds.push('work click shenshanxiulian');
+                        cmds.push('work click jianmenlipai');
+                        cmds.push('work click dubawulin');
+                        cmds.push('work click youlijianghu');
+                        cmds.push('work click yibangmaoxiang');
+                        cmds.push('work click zhengzhanzhongyuan');
+                        cmds.push('work click taofamanzu');
+                        cmds.push('public_op3');
+                        cmds.push('say');
+                        send_cmd(cmds);
+                        action_state = 2;
+                    } else if (action_state == 2) {
+                        var cmds = [];
+                        cmds.push('vip drops');
+                        for (var i = 0; i < 10; i++) {
+                            cmds.push('vip finish_big_task');
+                        }
+                        for (var i = 0; i < 10; i++) {
+                            cmds.push('vip finish_dig');
+                        }
+                        for (var i = 0; i < 10; i++) {
+                            cmds.push('vip finish_diaoyu');
+                        }
+                        cmds.push('vip finish_fb dulongzhai');
+                        cmds.push('vip finish_fb dulongzhai');
+                        cmds.push('vip finish_fb junying');
+                        cmds.push('vip finish_fb junying');
+                        cmds.push('vip finish_fb beidou');
+                        cmds.push('vip finish_fb beidou');
+                        cmds.push('vip finish_fb youling');
+                        cmds.push('vip finish_fb youling');
+                        cmds.push('vip finish_fb siyu');
+                        cmds.push('vip finish_fb changleweiyang');
+                        cmds.push('say');
+                        send_cmd(cmds);
+                        action_state = 3;
+                    } else if (action_state == 3) {
+                        var cmds = [];
+                        for (var i = 0; i < 20; i++) {
+                            cmds.push('clan incense yx');
+                        }
+                        for (var i = 0; i < 10; i++) {
+                            cmds.push('clan buy 703');
+                        }
+                        cmds.push('say');
+                        send_cmd(cmds);
+                        action_state = 4;
+                    } else if (action_state == 4) {
+                        var cmds = [];
+                        cmds.push('cangjian get_all');
+                        cmds.push('xueyin_shenbinggu blade get_all');
+                        cmds.push('xueyin_shenbinggu unarmed get_all');
+                        cmds.push('xueyin_shenbinggu throwing get_all');
+                        cmds.push('xueyin_shenbinggu spear get_all');
+                        cmds.push('xueyin_shenbinggu hammer get_all');
+                        cmds.push('xueyin_shenbinggu axe get_all');
+                        cmds.push('xueyin_shenbinggu whip get_all');
+                        cmds.push('xueyin_shenbinggu stick get_all');
+                        cmds.push('xueyin_shenbinggu staff get_all');
+                        cmds.push('say');
+                        send_cmd(cmds);
+                        action_state = 5;
+                    } else if (action_state == 5) {
+                        send_cmd('jh 1;look_npc snow_mercenary');
+                    } else if (action_state == 13) {
+                        var cmds = [];
+                        cmds.push('cangjian get_all');
+                        cmds.push('swords select_member houshan_miejue');
+                        cmds.push('swords select_member quanzhen_wantong');
+                        cmds.push('swords select_member quanzhen_wang');
+                        cmds.push('swords fight_test go');
+                        send_cmd(cmds);
+                    }
+                } else if (msg.get('type') == 'look_npc') {
+                    if (action_state == 5 && msg.get('id') == 'snow_mercenary') {
+                        for (var i = 1; ; i++) {
+                            var name = msg.get('cmd' + i + '_name');
+                            if (!name) {
+                                break;
+                            }
+                            if (name != '兑换礼包' && name != '1元礼包' && /.+礼包$/.test(name)) {
+                                send_cmd(msg.get('cmd' + i));
+                            }
+                        }
+                        send_cmd('e;e;event_1_63788647;w;n;e;e;look_npc snow_fist_trainer');
+                        action_state = 6;
+                    } else if (action_state == 6 && msg.get('id') == 'snow_fist_trainer') {
+                        send_cmd('event_1_44731074;event_1_8041045;event_1_8041045;event_1_29721519;e;e;n;look_npc snow_girl');
+                        action_state = 7;
+                    } else if (action_state == 7 && msg.get('id') == 'snow_girl') {
+                        send_cmd('lq_lmyh_lb;lq_bysf_lb;lq_dlth_lb;s;w;w;w;w;n;w;look_npc snow_smith');
+                        action_state = 8;
+                    } else if (action_state == 8 && msg.get('id') == 'snow_smith') {
+                        send_cmd('event_1_24319712;jh 2;n;n;n;n;w;s;look_npc luoyang_hongniang');
+                        action_state = 9;
+                    } else if (action_state == 9 && msg.get('id') == 'luoyang_hongniang') {
+                        send_cmd('lq_chunhui_lb;n;e;n;n;n;look_npc luoyang_luoyang3');
+                        action_state = 10;
+                    } else if (action_state == 10 && msg.get('id') == 'luoyang_luoyang3') {
+                        send_cmd('lq_chunhui_lb;e;look_npc luoyang_luoyang4');
+                        action_state = 11;
+                    } else if (action_state == 11 && msg.get('id') == 'luoyang_luoyang4') {
+                        send_cmd('tzjh_lq;jh 5;n;n;e;look_npc yangzhou_yangzhou9');
+                        action_state = 12;
+                    } else if (action_state == 12 && msg.get('id') == 'yangzhou_yangzhou9') {
+                        for (var i = 1; ; i++) {
+                            var name = msg.get('cmd' + i + '_name');
+                            if (!name) {
+                                break;
+                            }
+                            if (/.+礼包$/.test(name)) {
+                                send_cmd(msg.get('cmd' + i));
+                            }
+                        }
+                        send_cmd('w;n;w;sign7;home;say');
+                        action_state = 13;
+                    }
+                } else if (msg.get('type') == 'jh' && msg.get('subtype') == 'new_npc') {
+                    if (action_state == 6 && msg.get('id') == 'snow_fist_trainer') {
+                        send_cmd('look_npc snow_fist_trainer');
+                    } else if (action_state == 7 && msg.get('id') == 'snow_girl') {
+                        send_cmd('look_npc snow_girl');
+                    } else if (action_state == 8 && msg.get('id') == 'snow_smith') {
+                        send_cmd('look_npc snow_smith');
+                    } else if (action_state == 9 && msg.get('id') == 'luoyang_hongniang') {
+                        send_cmd('look_npc luoyang_hongniang');
+                    } else if (action_state == 10 && msg.get('id') == 'luoyang_luoyang3') {
+                        send_cmd('look_npc luoyang_luoyang3');
+                    } else if (action_state == 11 && msg.get('id') == 'luoyang_luoyang4') {
+                        send_cmd('look_npc luoyang_luoyang4');
+                    }
+                } else if (action_state == 13 && msg.get('type') == 'vs') {
+                    var vs_info = g_obj_map.get('msg_vs_info');
+                    var my_id = g_obj_map.get('msg_attrs').get('id');
+                    var pos = check_pos(vs_info, my_id);
+                    if (pos) {
+                        var subtype = msg.get('subtype');
+                        if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
+                            var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                            var buttons = get_skill_buttons(xdz);
+                            if (!select_perform(buttons, true)) {
+                                send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
+                            }
+                        } else if (subtype == 'combat_result') {
+                            send_cmd('swords fight_test go');
+                        }
+                    }
+                } else if (action_state == 14 && msg.get('type') == 'show_html_page') {
+                    do_answer(msg, function() {
+                        stop_task('finish!');
+                        action_state = 15;
+                    });
+                } else if (msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail') {
+                    if (action_state == 13 && /^你今天试剑次数已达限额。/.test(msg.get('msg'))) {
+                        send_cmd('question');
+                        action_state = 14;
+                    } else if (action_state == 14 && /^每日武林知识问答次数已经达到限额，请明天再来。/.test(msg.get('msg'))) {
+                        stop_task('finish!');
+                        action_state = 15;
+                    }
+                }
+            });
+            var cmds = [];
+            for (var i = 1; i <= 7; i++) {
+                cmds.push('share_ok ' + i);
+            }
+            cmds.push('say');
+            send_cmd(cmds);
+            action_state = 1;
+        } else if (cmd == '#heal') {
             do_full();
 		} else if (cmd == '#t+ connect' && !connect_trigger) {
 			log('open connect trigger...');
@@ -2404,6 +2567,18 @@
 		} else if (cmd == '#connect') {
             g_delay_connect = 0;
             connectServer();
+		} else if (cmd == '#echo on') {
+			log('set echo on.');
+			echo = true;
+		} else if (cmd == '#echo off') {
+			log('set echo off.');
+			echo = false;
+		} else if (cmd == '#echo') {
+			if (echo) {
+				execute_cmd('#echo off');
+			} else {
+				execute_cmd('#echo on');
+			}
 		} else if (cmd.substr(0, 8) == '#resize ') {
             var r = $.trim(cmd.substr(8)).match(/(\d+)\s+(\d+)/);
             if (r) {
@@ -2686,6 +2861,43 @@
                 log('hp and force is full');
             }
         });
+    }
+    function do_answer(msg, fn) {
+        var data = msg.get('msg');
+        if (data) {
+            var r = data.match(/知识问答第\s*(\d+)\s*\/\s*(\d+)\s*题/);
+            if (r) {
+                var count = parseInt(r[1]);
+                var total = parseInt(r[2]);
+                if (data.indexOf('回答正确！') >= 0) {
+                    if (count < total) {
+                        send_cmd('question');
+                    } else {
+                        stop_task('finish!');
+                    }
+                } else if (data.indexOf('回答错误！') >= 0) {
+                    log('answer is wrong!');
+                    if (count >= total) {
+                        fn();
+                    }
+                } else {
+                    var answer;
+                    var q = LIBS.questions.keys();
+                    for (var i in q) {
+                        var k = q[i];
+                        if (data.indexOf(k) >= 0) {
+                            answer = LIBS.questions.get(k);
+                            break;
+                        }
+                    }
+                    if (answer) {
+                        send_cmd('question ' + answer);
+                    } else {
+                        log('answer not found!');
+                    }
+                }
+            }
+        }
     }
     function get_area(name) {
         if (name == '光明顶') {
@@ -3050,7 +3262,7 @@
 	var cmd_queue = [];
 	var cmd_busy = false;
 	window.send_cmd = function(cmd, k) {
-		cmd_queue = cmd_queue.concat(cmd.split(';'));
+		cmd_queue = cmd_queue.concat(cmd instanceof Array ? cmd : cmd.split(';'));
 		if (!cmd_busy) {
 			_send_cmd(k);
 		}
@@ -3290,6 +3502,18 @@
 			}
 		}
 	};
-	log('addon loaded');
+
+	var _show_score = window.gSocketMsg2.show_score;
+	window.gSocketMsg2.show_score = function() {
+		_show_score.apply(this, arguments);
+        var $td = $('<td><button type="button" onclick="execute_cmd(\'#daily\');" class="cmd_click2"><span style="color:red;">自动<br>每日</span></button></td>');
+        var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
+        if ($('> td', $tr).length >= 4) {
+            $tr = $tr.parent().append('<tr></tr>');
+        }
+        $tr.append($td);
+	};
+    
+    log('addon loaded');
     }, 1000);
 })(unsafeWindow);
