@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.00
+// @version      1.1.0.01
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -9,7 +9,7 @@
 // @match        http://sword-server1.yytou.cn/*
 // @match        http://sword-server1-360.yytou.cn/*
 // @run-at       document-idle
-// @require      https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian-lib.js#v3
+// @require      https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian-lib.js#v4
 // @grant        unsafeWindow
 // ==/UserScript==
 // v1.0.0.02 2018.05.24 增加逃犯的触发器#t+ taofan
@@ -23,6 +23,7 @@
 // v1.0.0.11 2018.06.03 优化锁定攻击的算法，增加#connect指令
 // v1.0.0.12 2018.06.04 增加自动重连的触发器#t+ connect
 // v1.1.0.00 2018.06.07 增加了#t+ qinglong #t+ biaoche #t+ party #t+ guild #t+ task #question #heal等功能
+// v1.1.0.01 2018.06.07 改进#t+ pintu，增加#t+ snoop
 
 (function(window) {
     'use strict';
@@ -81,6 +82,33 @@
 			'u3093166', 'u3827219', 'u3288641', 'u2756496', 'u3071047',
 			'u2863851', 'u3884564', 'u2637468', 'u2790969', 'u3399330',
 			'u3892886' ];
+    var snoop_list = [ '寒夜·斩', '绕指·云', '魏娇', '剑仙', '阿不', '绘羽', '末日召唤', '花云', '清楚',
+            '红枣', '南英', '李寻花', '索命梵音', '苏妙玲', '庄梦蝶', '承影剑', '奈何离歌', '藏锋·破',
+            '抓狂', '纵横老野猪', '阿含', '老猫', '慕容九州', '飞鱼', '江海玥', '王老实', '糖醋排骨', '若心',
+            '王有财', '奇门遁甲', '幽冥姬', '陳慧琳', '纵横天下', '阿福', '梅大霸', '~陌上花开~', '神神·道道',
+            '孤烟', '画中画云里雾', '裴旻', '渡铁',	'鎏金黑玉锥', '暗月·刀', '一一YII', '凡星' ];
+    var snoop_ignore_list = [ '金甲符兵', '玄阴符兵', '段老大', '二娘', '岳老三', '云老四', '流寇', '恶棍',
+            '剧盗', '翻云刀神', '覆雨剑神', '织冰女侠', '排云狂神', '九天老祖', '天玑剑客', '天璇剑客', '天权剑客',
+            '玉衡剑客', '开阳剑客', '瑶光剑客', '北斗剑灵', '天枢剑客', '护卫', '小兵', '李信', '赫造基',
+            '独龙寨土匪', '土匪头目', '独龙寨军师', '傅一镖', '乱石强盗', '桃花弟子', '摇船老者', '祁空瑶','掌舵手',
+            '商人', '船员', '假船员', '船老大', '钓鱼老者', '念经僧人', '海蟹', '突厥骑兵', '寻宝贼', '闻元化及',
+            '楼兰遗民', '楼兰族长', '噬人蚁', '嗜血蜥蜴', '黑毒沙蝎', '沙漠王蛇', '戈壁凶狼', '沙漠悍匪', '突厥王子',
+            '毒医', '毒蜘蛛', '毒蚂蚁', '毒青蛙', '毒蜈蚣', '毒蝎子', '奔狂骁', '琦行', '吐蕃国师', '汝阳王', '宋喉',
+            '便衣*', '*队长', '叛贼', '黑衣守卫', '黑衣刀客', '地道看守', '倒茶老头', '紫薇教香主', '紫薇教长老',
+            '紫薇教掌教', '后土教香主', '后土教长老', '后土教掌教', '勾陈教香主', '勾陈教长老', '勾陈教掌教',
+            '长生教香主', '长生教长老', '长生教掌教', '紫薇真人', '后土真人', '勾陈真人', '长生真人', '太书令',
+            '少府卿', '执金吾', '羽林卫', '黄门丞', '大鸿胪', '舞乐令', '彩衣女官', '羽林中郎将', '车郎将', '户郎将',
+            '骑郎将', '公主家令', '公主丞', '紫衣侍女', '未央公主', '镇殿神兽', '守殿神兽', '镇谷神兽', '守谷神兽',
+            '镇潭神兽', '守潭神兽', '镇山神兽', '守山神兽', '幽荧幼崽', '幽荧兽魂', '幽荧王', '幽荧分身', '幽荧战神',
+            '螣蛇幼崽', '螣蛇兽魂', '螣蛇王', '螣蛇分身', '螣蛇战神', '应龙幼崽', '应龙兽魂', '应龙王', '应龙分身',
+            '应龙战神', '饕餮幼崽', '饕餮兽魂', '饕餮王', '饕餮分身', '饕餮战神', '孽龙分身', '孽龙之灵', '赤豹死士',
+            '黑鹰死士', '金狼死士', '金狼大将', '青衣盾卫', '飞羽神箭', '银狼近卫', '杀神寨头目', '杀神寨匪首',
+            '金凤凰', '冰麟兽', '紫寒兽', '龙纹兽', '龙角兽', '白衣少女', '黑衣少年', '九幽魔灵', '混沌妖灵',
+            '冰月仙人', '仙人分身', '玄武机关兽', '铁狼军', '银狼军', '金狼军', '金狼将', '十夫长', '百夫长',
+            '黑羽敌将', '黑羽刺客', '阿保甲', '胡族军士', '乞利', '豹军主帅', '豹军侍卫', '虎军主帅', '虎军侍卫',
+            '鹰军主帅', '鹰军侍卫', '中军侍卫', '颉利', '机关铜人', '九幽毒魔', '金锤力士', '断龙斧卫', '重甲矛士',
+            '大夏神箭', '金锤虎将', '断龙斧将', '镇陵矛将', '黑衣弩将', '穆小哥', '楚大师兄', '辛怪人', '杨英雄',
+            '韩马夫', '武壮士', '傅奇士', '渡云神识', '渡雨神识', '渡风神识' ];
 	var show_target = true;
 	var auto_attack = false;
 	var auto_defence = false;
@@ -123,15 +151,6 @@
     qinglong_npcs.put('杂货铺', '方老板');
     qinglong_npcs.put('祠堂大门', '朱老伯');
     qinglong_npcs.put('厅堂', '方寡妇');
-    var qinglong_list = [ '龙骨宝甲', '斩龙宝靴', '龙皮至尊衣', '斩龙宝戒', '斩龙帽', '斩龙宝链', '轩辕神盾', '鎏金缦罗', '天蚕围腰',
-            '斩龙宝镯', '飞宇天怒刀', '九天龙吟剑', '小李飞刀', '天罡掌套', '乌金玄火鞭', '开天宝棍', '达摩杖', '龙鳞', '天雷断龙斧',
-            '烛幽鬼煞锤', '斩龙鎏金枪', '胤天帽碎片', '胤天项链碎片', '胤天宝镯碎片', '胤天宝戒碎片', '胤天宝靴碎片', '胤天紫金衣碎片',
-            '昊天龙旋铠碎片', '鱼肠碎片', '水羽云裳碎片', '奉天金带碎片', '凤羽乾坤盾碎片', '雷霆诛神刀碎片', '轩辕剑碎片', '破岳拳套碎片',
-            '天雨玄镖碎片', '天神杖碎片', '轰天巨棍碎片', '神龙怒火鞭碎片', '胤武伏魔斧碎片', '九天灭世锤碎片', '玄冰凝魄枪碎片',
-            '烛龙神武冕碎片', '九鼎宝链碎片', '天武护镯碎片', '紫贪狼戒碎片', '山海羲皇靴碎片', '凤麟天华衣碎片', '皇极圣战铠碎片',
-            '灭魂匕碎片', '霸天圣袍碎片', '魔尊腰带碎片', '皇天无极盾碎片', '武皇惊霆刀碎片', '傲世圣极剑碎片', '驭风腾云碎片',
-            '驭风腾云碎片', '夜冥鬼泣碎片', '九霄渡业杖碎片', '倾宇破穹棍碎片', '无间诛魂鞭碎片', '不周开天斧碎片', '狂澜碎天锤碎片',
-            '紫龙镇嶽枪碎片' ];
 	var map_ids = new Map();
 	map_ids.put('xueting', '1');
 	map_ids.put('xt', '1');
@@ -274,6 +293,7 @@
 	secrets.put("duzhanglin", 2980);
 	secrets.put("langhuanyudong", 2980);
 	secrets.put("shanya", 2980);
+	secrets.put("qiaoyinxiaocun", 2980);
     
 	var message_listeners = [];
 	var listener_seq = 0;
@@ -1018,7 +1038,8 @@
 		return null;
 	}
 	var task_h_timer, task_h_listener, connect_trigger, pintu_trigger, taofan_trigger,
-            qinglong_trigger, biaoche_trigger, party_trigger, guild_trigger, task_trigger;
+            qinglong_trigger, biaoche_trigger, party_trigger, guild_trigger, task_trigger,
+            snoop_trigger;
 	function stop_task(msg) {
 		if (task_h_timer) {
 			clearInterval(task_h_timer);
@@ -1467,74 +1488,116 @@
 								}
 							}
 						}
-						
 					}
-					
 				}
 			});
 		} else if (cmd == '#t+ pintu' && !pintu_trigger) {
 			log('open pintu trigger...');
-			var bad_npc, good_npc;
-			pintu_trigger = add_listener(['channel', 'jh'], '',
-					function(msg) {
-						if (msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
-							var r = msg.get('msg').match(/【系统】(.+)对着(.+)叫道：.+，今天你可是在我的地盘，看来你是在劫难逃！/);
-							if (r) {
-								bad_npc = r[1];
-								good_npc = r[2];
-								var path;
-								var room = g_obj_map.get('msg_room');
-								if (room && room.get('map_id') == 'changan') {
-									if (room.get('short') == '地室') {
-										path = '';
-									} else if (room.get('short') == '万蛊堂') {
-										path = 's;';
-									} else if (room.get('short') == '千蛇窟') {
-										path = 'n;';
-									} else if (room.get('short') == '百毒池') {
-										path = 'e;';
-									} else if (room.get('short') == '十恶殿') {
-										path = 'w;';
-									} else {
-										path = 'jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721;';
-									}
-								} else {
-									path = 'jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721;';
-								}
-								if (bad_npc == '巫蛊王') {
-									path += 'n';
-								} else if (bad_npc == '夜千麟') {
-									path += 's';
-								} else if (bad_npc == '百毒旗主') {
-									path += 'w';
-								} else if (bad_npc == '十方恶神') {
-									path += 'e';
-								}
-								send_cmd(path);
-							}
-						} else if (bad_npc && good_npc && msg.get('type') == 'jh') {
-							if (msg.get('subtype') == 'info') {
-								for (var i = 1; ; i++) {
-									var npc = msg.get('npc' + i);
-									if (!npc) {
-										break;
-									} else {
-										var s = npc.split(',');
-										if (s.length > 1 && s[1] == good_npc) {
-											clickButton('kill ' + s[0]);
-											bad_npc = undefined;
-											good_npc = undefined;
-											break;
-										}
-									}
-								}
-							} else if (msg.get('subtype') == 'new_npc' && msg.get('name') == good_npc) {
-								clickButton('kill ' + msg.get('id'));
-								bad_npc = undefined;
-								good_npc = undefined;
-							}
-						}
-					});
+			var bad_npc, good_npc, target_id, action_state = 0;
+			pintu_trigger = add_listener(['channel', 'jh', 'vs', 'main_msg', 'notice'], '', function(msg) {
+                if (msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
+                    var r = msg.get('msg').match(/【系统】(.+)对着(.+)叫道：.+，今天你可是在我的地盘，看来你是在劫难逃！/);
+                    if (r) {
+                        bad_npc = r[1];
+                        good_npc = r[2];
+                        var path;
+                        var room = g_obj_map.get('msg_room');
+                        if (room && room.get('map_id') == 'changan') {
+                            if (room.get('short') == '地室') {
+                                path = '';
+                            } else if (room.get('short') == '万蛊堂') {
+                                path = 's;';
+                            } else if (room.get('short') == '千蛇窟') {
+                                path = 'n;';
+                            } else if (room.get('short') == '百毒池') {
+                                path = 'e;';
+                            } else if (room.get('short') == '十恶殿') {
+                                path = 'w;';
+                            } else {
+                                path = 'jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721;';
+                            }
+                        } else {
+                            path = 'jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721;';
+                        }
+                        if (bad_npc == '巫蛊王') {
+                            path += 'n';
+                        } else if (bad_npc == '夜千麟') {
+                            path += 's';
+                        } else if (bad_npc == '百毒旗主') {
+                            path += 'w';
+                        } else if (bad_npc == '十方恶神') {
+                            path += 'e';
+                        }
+                        send_cmd(path);
+                        action_state = 1;
+                    }
+                } else if (action_state == 1 && msg.get('type') == 'jh') {
+                    if (msg.get('subtype') == 'info') {
+                        for (var i = 1; ; i++) {
+                            var npc = msg.get('npc' + i);
+                            if (!npc) {
+                                break;
+                            } else {
+                                var s = npc.split(',');
+                                if (s.length > 1 && s[1] == good_npc) {
+                                    target_id = s[0];
+                                    clickButton('kill ' + target_id);
+                                    action_state = 2;
+                                    break;
+                                }
+                            }
+                        }
+                    } else if (msg.get('subtype') == 'new_npc' && msg.get('name') == good_npc) {
+                        target_id = msg.get('id');
+                        clickButton('kill ' + target_id);
+                        action_state = 2;
+                    }
+                } else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                    var vs_info = g_obj_map.get('msg_vs_info');
+                    var my_id = g_obj_map.get('msg_attrs').get('id');
+                    var pos = check_pos(vs_info, my_id);
+                    if (pos) {
+                        set_attack_target(target_id);
+                        action_state = 3;
+                    }
+                } else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                           && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                    console.log(msg.get('msg'));
+                    if (bad_npc == '巫蛊王') {
+                        send_cmd('s');
+                    } else if (bad_npc == '夜千麟') {
+                        send_cmd('n');
+                    } else if (bad_npc == '百毒旗主') {
+                        send_cmd('e');
+                    } else if (bad_npc == '十方恶神') {
+                        send_cmd('w');
+                    }
+                    action_state = 0;
+                } else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail') {
+                    if (/^你今天完成的宝藏秘图任务数量已经超量了，明天继续吧。/.test(msg.get('msg'))) {
+                        execute_cmd('#t- pintu');
+                    }
+                } else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                    action_state = 0;
+                    if (bad_npc == '巫蛊王') {
+                        send_cmd('s');
+                    } else if (bad_npc == '夜千麟') {
+                        send_cmd('n');
+                    } else if (bad_npc == '百毒旗主') {
+                        send_cmd('e');
+                    } else if (bad_npc == '十方恶神') {
+                        send_cmd('w');
+                    }
+                } else if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var r = removeSGR(msg.get('msg')).match(/^这是你今天完成的第(\d+)\/(\d+)场宝藏秘图之战！/);
+                    if (r) {
+                        console.log(r[0]);
+                        if (parseInt(r[1]) >= parseInt(r[2])) {
+                            execute_cmd('#t- pintu');
+                        }
+                    }
+                }
+            });
 		} else if (cmd == '#t- pintu' && pintu_trigger) {
 			log('pintu trigger closed');
 			remove_listener(pintu_trigger);
@@ -1542,64 +1605,75 @@
 		} else if ((cmd == '#t+ taofan' || cmd == '#t+ taofan 1' || cmd == '#t+ taofan 2') && !taofan_trigger) {
 			log('open taofan trigger...');
 			var taofan_target = kuafu + (cmd == '#t+ taofan 2' ? '段老大' : '无一'), taofan_id, action_state = 0;
-			taofan_trigger = add_listener(['channel', 'main_msg', 'jh', 'vs', 'notice'], '',
-					function(msg) {
-						if (msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
-							if (removeSGR(msg.get('msg')).indexOf('【系统】' + kuafu + '段老大慌不择路，逃往了') >= 0) {
-								var r = msg.get('msg').match(/find_qinglong_road\s+(\d+)/);
-								if (r) {
-                                    console.log(new Date().format("HH:mm:ss") + ' goto taofan ' + r[0]);
-                                    clickButton(r[0]);
-                                    action_state = 1;
-								}
-							}
-						} else if (action_state == 1 && msg.get('type') == 'jh') {
-							if (msg.get('subtype') == 'info') {
-								for (var i = 1; ; i++) {
-									var npc = msg.get('npc' + i);
-									if (!npc) {
-										break;
-									} else {
-										var s = npc.split(',');
-										if (s.length > 1 && removeSGR(s[1]) == taofan_target) {
-											taofan_id = s[0];
-											console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
-                                            action_state = 2;
-											break;
-										}
-									}
-								}
-							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == taofan_target) {
-								taofan_id = msg.get('id');
-								console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
-                                action_state = 2;
-							}
-						} else if (action_state == 2 && msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
-							if (removeSGR(msg.get('msg')).indexOf(kuafu + '无一对著' + kuafu + '段老大喝道：「臭贼！今日不是你死就是我活！」') >= 0) {
-								console.log(new Date().format("HH:mm:ss") + ' kill ' + taofan_id);
-								clickButton('kill ' + taofan_id);
-								action_state = 3;
-							}
-						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
-                            var vs_info = g_obj_map.get('msg_vs_info');
-                            var my_id = g_obj_map.get('msg_attrs').get('id');
-                            var pos = check_pos(vs_info, my_id);
-                            if (pos) {
-                                set_attack_target(taofan_id);
-                                var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
-                                var buttons = get_skill_buttons(xdz);
-                                select_perform(buttons, true);
-                                action_state = 4;
+			taofan_trigger = add_listener(['channel', 'main_msg', 'jh', 'vs', 'notice'], '', function(msg) {
+                if (msg.get('type') == 'channel' && msg.get('subtype') == 'sys') {
+                    if (removeSGR(msg.get('msg')).indexOf('【系统】' + kuafu + '段老大慌不择路，逃往了') >= 0) {
+                        var r = msg.get('msg').match(/find_qinglong_road\s+(\d+)/);
+                        if (r) {
+                            console.log(new Date().format("HH:mm:ss") + ' goto taofan ' + r[0]);
+                            clickButton(r[0]);
+                            action_state = 1;
+                        }
+                    }
+                } else if (action_state == 1 && msg.get('type') == 'jh') {
+                    if (msg.get('subtype') == 'info') {
+                        for (var i = 1; ; i++) {
+                            var npc = msg.get('npc' + i);
+                            if (!npc) {
+                                break;
+                            } else {
+                                var s = npc.split(',');
+                                if (s.length > 1 && removeSGR(s[1]) == taofan_target) {
+                                    taofan_id = s[0];
+                                    console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
+                                    action_state = 2;
+                                    break;
+                                }
                             }
-						} else if (action_state == 3 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
-                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
-                            console.log(msg.get('msg'));
-                            action_state = 0;
-						} else if (action_state == 4 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
-                            action_state = 0;
-                            do_full('home');
-						}
-					});
+                        }
+                    } else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == taofan_target) {
+                        taofan_id = msg.get('id');
+                        console.log(new Date().format("HH:mm:ss") + ' find taofan ' + taofan_id);
+                        action_state = 2;
+                    }
+                } else if (action_state == 2 && msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    if (removeSGR(msg.get('msg')).indexOf(kuafu + '无一对著' + kuafu + '段老大喝道：「臭贼！今日不是你死就是我活！」') >= 0) {
+                        console.log(new Date().format("HH:mm:ss") + ' kill ' + taofan_id);
+                        clickButton('kill ' + taofan_id);
+                        action_state = 3;
+                    }
+                } else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                    var vs_info = g_obj_map.get('msg_vs_info');
+                    var my_id = g_obj_map.get('msg_attrs').get('id');
+                    var pos = check_pos(vs_info, my_id);
+                    if (pos) {
+                        set_attack_target(taofan_id);
+                        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+                        var buttons = get_skill_buttons(xdz);
+                        select_perform(buttons, true);
+                        action_state = 4;
+                    }
+                } else if (action_state == 3 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                           && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                    console.log(msg.get('msg'));
+                    action_state = 0;
+                } else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail') {
+                    if (/^你今天的逃犯任务次数已达到上限，明天继续吧。/.test(msg.get('msg'))) {
+                        execute_cmd('#t- taofan');
+                    }
+                } else if (action_state == 4 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                    action_state = 0;
+                    do_full('home');
+                } else if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var r = removeSGR(msg.get('msg')).match(/^这是你今天完成的第(\d+)\/(\d+)场逃犯任务！/);
+                    if (r) {
+                        console.log(r[0]);
+                        if (parseInt(r[1]) >= parseInt(r[2])) {
+                            execute_cmd('#t- taofan');
+                        }
+                    }
+                }
+            });
 		} else if (cmd == '#t- taofan' && taofan_trigger) {
 			log('taofan trigger closed');
 			remove_listener(taofan_trigger);
@@ -1607,73 +1681,73 @@
 		} else if ((cmd == '#t+ qinglong' || cmd == '#t+ qinglong 1' || cmd == '#t+ qinglong 2') && !qinglong_trigger) {
 			log('open qinglong trigger...');
             var qinglong_road, qinglong_target, target_id, action_state = 0;
-			qinglong_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '',
-					function(msg) {
-						if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
-                            var data = removeSGR(msg.get('msg'));
-                            var r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是本大区第(\d+)个跨服青龙。/);
-							if (r) {
-                                if (r[1].indexOf(kuafu) == 0) {
-                                    console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
-                                    if (qinglong_list.indexOf(r[3]) >= 0) {
-                                        var s = r[2].match(/find_qinglong_road\s+(\d+)/);
-                                        if (s) {
-                                            qinglong_road = s[0];
-                                            clickButton(qinglong_road);
-                                            if (cmd == '#t+ qinglong 1') {
-                                                qinglong_target = r[1];
-                                                action_state = 1;
-                                            } else if (cmd == '#t+ qinglong 2') {
-                                                qinglong_target = kuafu + qinglong_npcs.get(removeLink(r[2]));
-                                                action_state = 1;
-                                            }
-                                        }
-                                    }
-                                }
-							} else {
-                                r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是跨服第(\d+)个全服跨服青龙。/);
-                                if (r && r[1].indexOf('[新区]') < 0) {
-                                    console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
-                                    var s = r[2].match(/find_qinglong_road\s+(\d+)/);
-                                    if (s) {
-                                        qinglong_road = s[0];
-                                        clickButton(qinglong_road);
+			qinglong_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '',	function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var data = removeSGR(msg.get('msg'));
+                    var r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是本大区第(\d+)个跨服青龙。/);
+                    if (r) {
+                        if (r[1].indexOf(kuafu) == 0) {
+                            console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                            if (LIBS.equip_sets.get('T10').indexOf(r[3]) >= 0 || LIBS.equip_sets.get('T11').indexOf(r[3]) >= 0
+                                    || LIBS.equip_sets.get('T12').indexOf(r[3]) >= 0) {
+                                var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                                if (s) {
+                                    qinglong_road = s[0];
+                                    clickButton(qinglong_road);
+                                    if (cmd == '#t+ qinglong 1') {
+                                        qinglong_target = r[1];
+                                        action_state = 1;
+                                    } else if (cmd == '#t+ qinglong 2') {
+                                        qinglong_target = kuafu + qinglong_npcs.get(removeLink(r[2]));
+                                        action_state = 1;
                                     }
                                 }
                             }
-						} else if (action_state == 1 && msg.get('type') == 'jh') {
-							if (msg.get('subtype') == 'info') {
-								for (var i = 1; ; i++) {
-									var npc = msg.get('npc' + i);
-									if (!npc) {
-										break;
-									} else {
-										var s = npc.split(',');
-										if (s.length > 1 && removeSGR(s[1]) == qinglong_target) {
-                                            target_id = s[0];
-											clickButton('kill ' + target_id);
-                                            action_state = 2;
-											break;
-										}
-									}
-								}
-							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == qinglong_target) {
-                                target_id = msg.get('id');
-								clickButton('kill ' + target_id);
-                                action_state = 2;
-							}
-						} else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
-                            set_attack_target(target_id);
-                            action_state = 3;
-						} else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
-                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
-                            console.log(msg.get('msg'));
-                            action_state = 0;
-						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
-                            action_state = 0;
-                            do_full(qinglong_road);
                         }
-					});
+                    } else {
+                        r = data.match(/青龙会组织：(.+)正在(.+)施展力量，本会愿出(.+)的战利品奖励给本场战斗的最终获胜者。这是跨服第(\d+)个全服跨服青龙。/);
+                        if (r && r[1].indexOf('[新区]') < 0) {
+                            console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                            var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                            if (s) {
+                                qinglong_road = s[0];
+                                clickButton(qinglong_road);
+                            }
+                        }
+                    }
+                } else if (action_state == 1 && msg.get('type') == 'jh') {
+                    if (msg.get('subtype') == 'info') {
+                        for (var i = 1; ; i++) {
+                            var npc = msg.get('npc' + i);
+                            if (!npc) {
+                                break;
+                            } else {
+                                var s = npc.split(',');
+                                if (s.length > 1 && removeSGR(s[1]) == qinglong_target) {
+                                    target_id = s[0];
+                                    clickButton('kill ' + target_id);
+                                    action_state = 2;
+                                    break;
+                                }
+                            }
+                        }
+                    } else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == qinglong_target) {
+                        target_id = msg.get('id');
+                        clickButton('kill ' + target_id);
+                        action_state = 2;
+                    }
+                } else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                    set_attack_target(target_id);
+                    action_state = 3;
+                } else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                           && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                    console.log(msg.get('msg'));
+                    action_state = 0;
+                } else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                    action_state = 0;
+                    do_full(qinglong_road);
+                }
+            });
 		} else if (cmd == '#t- qinglong' && qinglong_trigger) {
 			log('qinglong trigger closed');
 			remove_listener(qinglong_trigger);
@@ -1681,59 +1755,58 @@
 		} else if ((cmd == '#t+ biaoche' || cmd == '#t+ biaoche 1' || cmd == '#t+ biaoche 2') && !biaoche_trigger) {
 			log('open biaoche trigger...');
             var biaoche_road, biaoche_target, target_id, action_state = 0;
-			biaoche_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '',
-					function(msg) {
-						if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
-                            var data = removeSGR(msg.get('msg'));
-                            var r = data.match(/荣威镖局:(.*)押运镖车行至跨服\-(.*)，忽入(.*)埋伏之中，哪位好汉能伸出援手，我荣威镖局必有重谢！/);
-							if (r && r[1].indexOf(kuafu) == 0) {
-                                console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
-                                var s = r[2].match(/find_qinglong_road\s+(\d+)/);
-                                if (s) {
-                                    biaoche_road = s[0];
-                                    clickButton(biaoche_road);
-                                    if (cmd == '#t+ biaoche 1') {
-                                        biaoche_target = r[3];
-                                        action_state = 1;
-                                    } else if (cmd == '#t+ biaoche 2') {
-                                        biaoche_target = r[1];
-                                        action_state = 1;
-                                    }
+			biaoche_trigger = add_listener(['main_msg', 'jh', 'vs', 'notice'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    var data = removeSGR(msg.get('msg'));
+                    var r = data.match(/荣威镖局:(.*)押运镖车行至跨服\-(.*)，忽入(.*)埋伏之中，哪位好汉能伸出援手，我荣威镖局必有重谢！/);
+                    if (r && r[1].indexOf(kuafu) == 0) {
+                        console.log(new Date().format("HH:mm:ss") + ' ' + removeLink(r[0]));
+                        var s = r[2].match(/find_qinglong_road\s+(\d+)/);
+                        if (s) {
+                            biaoche_road = s[0];
+                            clickButton(biaoche_road);
+                            if (cmd == '#t+ biaoche 1') {
+                                biaoche_target = r[3];
+                                action_state = 1;
+                            } else if (cmd == '#t+ biaoche 2') {
+                                biaoche_target = r[1];
+                                action_state = 1;
+                            }
+                        }
+                    }
+                } else if (action_state == 1 && msg.get('type') == 'jh') {
+                    if (msg.get('subtype') == 'info') {
+                        for (var i = 1; ; i++) {
+                            var npc = msg.get('npc' + i);
+                            if (!npc) {
+                                break;
+                            } else {
+                                var s = npc.split(',');
+                                if (s.length > 1 && removeSGR(s[1]) == biaoche_target) {
+                                    target_id = s[0];
+                                    clickButton('kill ' + target_id);
+                                    action_state = 2;
+                                    break;
                                 }
                             }
-						} else if (action_state == 1 && msg.get('type') == 'jh') {
-							if (msg.get('subtype') == 'info') {
-								for (var i = 1; ; i++) {
-									var npc = msg.get('npc' + i);
-									if (!npc) {
-										break;
-									} else {
-										var s = npc.split(',');
-										if (s.length > 1 && removeSGR(s[1]) == biaoche_target) {
-                                            target_id = s[0];
-											clickButton('kill ' + target_id);
-                                            action_state = 2;
-											break;
-										}
-									}
-								}
-							} else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == biaoche_target) {
-                                target_id = msg.get('id');
-								clickButton('kill ' + target_id);
-                                action_state = 2;
-							}
-						} else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
-                            set_attack_target(target_id);
-                            action_state = 3;
-						} else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
-                                   && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
-                            console.log(msg.get('msg'));
-                            action_state = 0;
-						} else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
-                            action_state = 0;
-                            do_full(biaoche_road);
                         }
-					});
+                    } else if (msg.get('subtype') == 'new_npc' && removeSGR(msg.get('name')) == biaoche_target) {
+                        target_id = msg.get('id');
+                        clickButton('kill ' + target_id);
+                        action_state = 2;
+                    }
+                } else if (action_state == 2 && msg.get('type') == 'vs' && msg.get('subtype') == 'vs_info') {
+                    set_attack_target(target_id);
+                    action_state = 3;
+                } else if (action_state == 2 && msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail'
+                           && msg.get('msg').indexOf('已经太多人了，不要以多欺少啊。') == 0) {
+                    console.log(msg.get('msg'));
+                    action_state = 0;
+                } else if (action_state == 3 && msg.get('type') == 'vs' && msg.get('subtype') == 'combat_result') {
+                    action_state = 0;
+                    do_full(biaoche_road);
+                }
+            });
 		} else if (cmd == '#t- biaoche' && biaoche_trigger) {
 			log('biaoche trigger closed');
 			remove_listener(biaoche_trigger);
@@ -2286,6 +2359,30 @@
 			log('task trigger closed');
 			remove_listener(task_trigger);
 			task_trigger = undefined;
+		} else if (cmd == '#t+ snoop' && !snoop_trigger) {
+			log('open snoop trigger...');
+			snoop_trigger = add_listener('channel', '', function(msg) {
+                var data = removeSGR(msg.get('msg'));
+                if (msg.get('subtype') == 'rumor') {
+                    var r = data.match(/^【谣言】某人：听说(.+)被(.+)杀死了。/);
+                    if (r && snoop_list.indexOf(r[2]) >= 0 && snoop_ignore_list.indexOf(r[1]) < 0) {
+                        console.log(new Date().format("HH:mm:ss") + ' ' + r[0]);
+                    }
+                } else if (msg.get('subtype') == 'sys') {
+                    var data = removeLink(data);
+                    var r = data.match(/^【系统】青龙会组织：(.*)正在(.*)施展力量，本会愿出(.*)的战利品奖励给本场战斗的最终获胜者。这是(.+)青龙。/);
+                    if (!r) {
+                        r = data.match(/^【系统】跨服：(.*)逃到了跨服时空(.*)之中，青龙会组织悬赏(.*)惩治恶人，众位英雄快来诛杀。这是(.+)青龙。/);
+                    }
+                    if (r && (r[1].substr(0, 1) != '[' || r[1].indexOf(kuafu) == 0)) {
+                        console.log(new Date().format("HH:mm:ss") + ' ' + r[0]);
+                    }
+                }
+            });
+		} else if (cmd == '#t- snoop' && snoop_trigger) {
+			log('snoop trigger closed');
+			remove_listener(snoop_trigger);
+			snoop_trigger = undefined;
 		} else if (cmd == '#mapid') {
             var room = g_obj_map.get('msg_room');
             if (room && room.get('map_id')) {
@@ -2297,10 +2394,9 @@
             do_full();
 		} else if (cmd == '#t+ connect' && !connect_trigger) {
 			log('open connect trigger...');
-			connect_trigger = add_listener('disconnect', 'change',
-					function(msg) {
-                        execute_cmd('#connect');
-					});
+			connect_trigger = add_listener('disconnect', 'change', function(msg) {
+                execute_cmd('#connect');
+            });
 		} else if (cmd == '#t- connect' && connect_trigger) {
 			log('connect trigger closed');
 			remove_listener(connect_trigger);
@@ -3173,7 +3269,7 @@
 				$tr = $tr.parent().append('<tr></tr>');
 			}
 			$tr.append($td);
-		} else {
+		} else if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
 			var $e, do_kill = false;
 			$('#out > span.out button.cmd_click2').each(function() {
 				$e = $(this);
