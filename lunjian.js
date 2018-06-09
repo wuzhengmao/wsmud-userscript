@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.02
+// @version      1.1.0.03
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -25,6 +25,7 @@
 // v1.1.0.00 2018.06.07 增加了#t+ qinglong #t+ biaoche #t+ party #t+ guild #t+ task #question #heal等功能
 // v1.1.0.01 2018.06.07 改进#t+ pintu，增加#t+ snoop
 // v1.1.0.02 2018.06.08 增加自动每日#daily
+// v1.1.0.03 2018.06.09 完善一键日常功能
 
 (function(window) {
     'use strict';
@@ -2369,93 +2370,166 @@
 		} else if (cmd == '#daily') {
             log('start auto daily...');
             var action_state = 0;
-            add_task_listener(['main_msg', 'look_npc', 'jh', 'vs', 'show_html_page', 'notice'], '', function(msg) {
-                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text' && msg.get('msg').indexOf('你自言自语不知道在说些什么') == 0) {
-                    if (action_state == 1) {
-                        var cmds = [];
-                        cmds.push('work click maikuli');
-                        cmds.push('work click duancha');
-                        cmds.push('work click dalie');
-                        cmds.push('work click baobiao');
-                        cmds.push('work click maiyi');
-                        cmds.push('work click xuncheng');
-                        cmds.push('work click datufei');
-                        cmds.push('work click dalei');
-                        cmds.push('work click kangjijinbin');
-                        cmds.push('work click zhidaodiying');
-                        cmds.push('work click dantiaoqunmen');
-                        cmds.push('work click shenshanxiulian');
-                        cmds.push('work click jianmenlipai');
-                        cmds.push('work click dubawulin');
-                        cmds.push('work click youlijianghu');
-                        cmds.push('work click yibangmaoxiang');
-                        cmds.push('work click zhengzhanzhongyuan');
-                        cmds.push('work click taofamanzu');
-                        cmds.push('public_op3');
-                        cmds.push('say');
-                        send_cmd(cmds);
-                        action_state = 2;
-                    } else if (action_state == 2) {
-                        var cmds = [];
-                        cmds.push('vip drops');
-                        for (var i = 0; i < 10; i++) {
-                            cmds.push('vip finish_big_task');
+            add_task_listener(['main_msg', 'look_npc', 'jh', 'vs', 'show_html_page', 'notice', 'unknow_command'], '', function(msg) {
+                if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
+                    if (/^你自言自语不知道在说些什么/.test(msg.get('msg'))) {
+                        if (action_state == 1) {
+                            var cmds = [];
+                            cmds.push('work click maikuli');
+                            cmds.push('work click duancha');
+                            cmds.push('work click dalie');
+                            cmds.push('work click baobiao');
+                            cmds.push('work click maiyi');
+                            cmds.push('work click xuncheng');
+                            cmds.push('work click datufei');
+                            cmds.push('work click dalei');
+                            cmds.push('work click kangjijinbin');
+                            cmds.push('work click zhidaodiying');
+                            cmds.push('work click dantiaoqunmen');
+                            cmds.push('work click shenshanxiulian');
+                            cmds.push('work click jianmenlipai');
+                            cmds.push('work click dubawulin');
+                            cmds.push('work click youlijianghu');
+                            cmds.push('work click yibangmaoxiang');
+                            cmds.push('work click zhengzhanzhongyuan');
+                            cmds.push('work click taofamanzu');
+                            cmds.push('public_op3');
+                            cmds.push('say');
+                            send_cmd(cmds);
+                            action_state = 2;
+                        } else if (action_state == 2) {
+                            var cmds = [];
+                            cmds.push('vip drops');
+                            for (var i = 0; i < 10; i++) {
+                                cmds.push('vip finish_big_task');
+                            }
+                            for (var i = 0; i < 10; i++) {
+                                cmds.push('vip finish_dig');
+                            }
+                            for (var i = 0; i < 10; i++) {
+                                cmds.push('vip finish_diaoyu');
+                            }
+                            cmds.push('vip finish_fb dulongzhai');
+                            cmds.push('vip finish_fb dulongzhai');
+                            cmds.push('vip finish_fb junying');
+                            cmds.push('vip finish_fb junying');
+                            cmds.push('vip finish_fb beidou');
+                            cmds.push('vip finish_fb beidou');
+                            cmds.push('vip finish_fb youling');
+                            cmds.push('vip finish_fb youling');
+                            cmds.push('vip finish_fb siyu');
+                            cmds.push('vip finish_fb changleweiyang');
+                            cmds.push('say');
+                            send_cmd(cmds);
+                            action_state = 3;
+                        } else if (action_state == 3) {
+                            var cmds = [];
+                            for (var i = 0; i < 20; i++) {
+                                cmds.push('clan incense yx');
+                            }
+                            for (var i = 0; i < 10; i++) {
+                                cmds.push('clan buy 703');
+                            }
+                            cmds.push('say');
+                            send_cmd(cmds);
+                            action_state = 4;
+                        } else if (action_state == 4) {
+                            var cmds = [];
+                            cmds.push('cangjian get_all');
+                            cmds.push('xueyin_shenbinggu blade get_all');
+                            cmds.push('xueyin_shenbinggu unarmed get_all');
+                            cmds.push('xueyin_shenbinggu throwing get_all');
+                            cmds.push('xueyin_shenbinggu spear get_all');
+                            cmds.push('xueyin_shenbinggu hammer get_all');
+                            cmds.push('xueyin_shenbinggu axe get_all');
+                            cmds.push('xueyin_shenbinggu whip get_all');
+                            cmds.push('xueyin_shenbinggu stick get_all');
+                            cmds.push('xueyin_shenbinggu staff get_all');
+                            cmds.push('say');
+                            send_cmd(cmds);
+                            action_state = 5;
+                        } else if (action_state == 5) {
+                            send_cmd('jh 1;look_npc snow_mercenary');
+                        } else if (action_state == 13) {
+                            var cmds = [];
+                            cmds.push('cangjian get_all');
+                            cmds.push('swords select_member houshan_miejue');
+                            cmds.push('swords select_member quanzhen_wantong');
+                            cmds.push('swords select_member quanzhen_wang');
+                            cmds.push('swords fight_test go');
+                            send_cmd(cmds);
+                        } else if (action_state == 15) {
+                            send_cmd('jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;e;n;n;n;w;event_1_31320275;say');
+                            action_state = 16;
+                        } else if (action_state == 16) {
+                            send_cmd('jh 14;w;n;n;n;n;event_1_32682066;event_1_48044005;kill bingyuegu_binglinshou');
+                        } else if (action_state == 17) {
+                            if (get_room_name() == '九幽之洞') {
+                                send_cmd('event_1_41741346;kill bingyuegu_jiuyoumoling');
+                            } else {
+                                send_cmd('say');
+                                action_state = 18;
+                            }
+                        } else if (action_state == 18) {
+                            send_cmd('team quit;jh 26;w;w;n;n;event_1_14435995;s;e;e;event_1_18075497;w;w;w;w;say');
+                            action_state = 19;
+                        } else if (action_state == 19) {
+                            if (get_room_name() == '阴山岩画') {
+                                send_cmd('wield sword of windspring;event_1_12853448;auto_equip on;say');
+                                action_state = 20;
+                            } else {
+                                send_cmd('jh 26;w;w;n;w;w;w;n;n;e;e;say');
+                            }
+                        } else if (action_state == 20) {
+                            var attrs = g_obj_map.get('msg_attrs');
+                            if (parseInt(attrs.get('str')) >= 87) {
+                                var item = get_item('obj_baiyujian');
+                                if (!item || parseInt(item[2]) < 50) {
+                                    send_cmd('jh 15;s;s;s;s;w;look_npc qingcheng_weaponor');
+                                } else {
+                                    send_cmd('jh 28;n;w;w;w;w;w;w;nw;ne;nw;ne;nw;ne;e;shediao');
+                                    action_state = 21;
+                                }
+                            } else {
+                                send_cmd('jh 37;n;e;e;nw;nw;w;n;e;n;e;e;e;ne;ne;ne;se;n;event_1_97487911;say');
+                                action_state = 23;
+                            }
+                        } else if (action_state == 23) {
+                            send_cmd('jh 35;nw;nw;nw;n;ne;nw\nw;nw;e;e;e;e;e;se;n;n;w;n;w;event_1_53278632;sousuo;sousuo;jh 36;yell;say');
+                            action_state = 24;
+                        } else if (action_state == 24) {
+                            if (get_room_name() == '东海码头') {
+                                setTimeout(function() {
+                                    send_cmd('yell;say');
+                                }, 2000);
+                            }
+                        } else if (action_state == 25) {
+                            if (get_room_name() == '崖底') {
+                                send_cmd('event_1_4788477;nw;w;sw;w;n;n;w;w;w;s;w;nw;ne;ne;ne;e;e;e;e;e;s;e;event_1_44025101;say');
+                            } else {
+                                send_cmd('event_1_36230918;e;e;s;event_1_77496481;say');
+                                action_state = 26;
+                            }
+                        } else if (action_state == 26) {
+                            if (get_room_name() == '澜沧江南岸') {
+                                send_cmd('se;s;s;e;n;n;e;s;e;ne;s;sw;e;e;ne;ne;nw;ne;ne;n;n;w');
+                                send_cmd('shop money_buy shop9_N_10;shop money_buy shop9_N_5;shop money_buy shop10_N_10;shop money_buy shop10_N_5;lianyao');
+                            } else {
+                                send_cmd('jh 40;s;s;s;s;e;s;se;sw;s;s;s;e;e;sw;se;sw;se;event_1_8004914;say');
+                            }
+                        } else if (action_state == 27) {
+                            if (get_room_name() == '失足岩') {
+                                send_cmd('nw;n;ne;nw;nw;w;n;n;n;e;e;s;give tianshan_hgdz;ask tianshan_hgdz;ask tianshan_hgdz;s;event_1_34855843;say');
+                                action_state = 28;
+                            } else {
+                                send_cmd('se;s;e;n;ne;nw;event_1_58460791;say');
+                            }
+                        } else if (action_state == 28) {
+                            stop_task('finish');
                         }
-                        for (var i = 0; i < 10; i++) {
-                            cmds.push('vip finish_dig');
-                        }
-                        for (var i = 0; i < 10; i++) {
-                            cmds.push('vip finish_diaoyu');
-                        }
-                        cmds.push('vip finish_fb dulongzhai');
-                        cmds.push('vip finish_fb dulongzhai');
-                        cmds.push('vip finish_fb junying');
-                        cmds.push('vip finish_fb junying');
-                        cmds.push('vip finish_fb beidou');
-                        cmds.push('vip finish_fb beidou');
-                        cmds.push('vip finish_fb youling');
-                        cmds.push('vip finish_fb youling');
-                        cmds.push('vip finish_fb siyu');
-                        cmds.push('vip finish_fb changleweiyang');
-                        cmds.push('say');
-                        send_cmd(cmds);
-                        action_state = 3;
-                    } else if (action_state == 3) {
-                        var cmds = [];
-                        for (var i = 0; i < 20; i++) {
-                            cmds.push('clan incense yx');
-                        }
-                        for (var i = 0; i < 10; i++) {
-                            cmds.push('clan buy 703');
-                        }
-                        cmds.push('say');
-                        send_cmd(cmds);
-                        action_state = 4;
-                    } else if (action_state == 4) {
-                        var cmds = [];
-                        cmds.push('cangjian get_all');
-                        cmds.push('xueyin_shenbinggu blade get_all');
-                        cmds.push('xueyin_shenbinggu unarmed get_all');
-                        cmds.push('xueyin_shenbinggu throwing get_all');
-                        cmds.push('xueyin_shenbinggu spear get_all');
-                        cmds.push('xueyin_shenbinggu hammer get_all');
-                        cmds.push('xueyin_shenbinggu axe get_all');
-                        cmds.push('xueyin_shenbinggu whip get_all');
-                        cmds.push('xueyin_shenbinggu stick get_all');
-                        cmds.push('xueyin_shenbinggu staff get_all');
-                        cmds.push('say');
-                        send_cmd(cmds);
-                        action_state = 5;
-                    } else if (action_state == 5) {
-                        send_cmd('jh 1;look_npc snow_mercenary');
-                    } else if (action_state == 13) {
-                        var cmds = [];
-                        cmds.push('cangjian get_all');
-                        cmds.push('swords select_member houshan_miejue');
-                        cmds.push('swords select_member quanzhen_wantong');
-                        cmds.push('swords select_member quanzhen_wang');
-                        cmds.push('swords fight_test go');
-                        send_cmd(cmds);
+                    } else if (action_state == 24 && /^大船终于抵达了南海岸边。你走下船来。/.test(msg.get('msg'))) {
+                        send_cmd('e;ne;ne;ne;e;e;e;event_1_9179222;e;event_1_11720543;w;n;e;e;s;e;event_1_44025101;say');
+                        action_state = 25;
                     }
                 } else if (msg.get('type') == 'look_npc') {
                     if (action_state == 5 && msg.get('id') == 'snow_mercenary') {
@@ -2474,10 +2548,14 @@
                         send_cmd('event_1_44731074;event_1_8041045;event_1_8041045;event_1_29721519;e;e;n;look_npc snow_girl');
                         action_state = 7;
                     } else if (action_state == 7 && msg.get('id') == 'snow_girl') {
-                        send_cmd('lq_lmyh_lb;lq_bysf_lb;lq_dlth_lb;s;w;w;w;w;n;w;look_npc snow_smith');
+                        send_cmd('lq_lmyh_lb;lq_bysf_lb;lq_dlth_lb;s;w;w;w;w;n;w;items;look_npc snow_smith');
                         action_state = 8;
                     } else if (action_state == 8 && msg.get('id') == 'snow_smith') {
-                        send_cmd('event_1_24319712;jh 2;n;n;n;n;w;s;look_npc luoyang_hongniang');
+                        var item = get_item('yuhanyi');
+                        if (!item) {
+                            send_cmd('event_1_24319712');
+                        }
+                        send_cmd('jh 2;n;n;n;n;w;s;look_npc luoyang_hongniang');
                         action_state = 9;
                     } else if (action_state == 9 && msg.get('id') == 'luoyang_hongniang') {
                         send_cmd('lq_chunhui_lb;n;e;n;n;n;look_npc luoyang_luoyang3');
@@ -2500,6 +2578,11 @@
                         }
                         send_cmd('w;n;w;sign7;home;say');
                         action_state = 13;
+                    } else if (action_state == 20 && msg.get('id') == 'qingcheng_weaponor') {
+                        send_cmd('event_1_69194627 go;items use obj_baiyujian_bao;items;say');
+                    } else if (action_state == 22 && msg.get('id') == 'snow_herbalist') {
+                        send_cmd('event_1_47493781;jh 37;n;e;e;nw;nw;w;n;e;n;e;e;e;ne;ne;ne;se;n;event_1_97487911;say');
+                        action_state = 23;
                     }
                 } else if (msg.get('type') == 'jh' && msg.get('subtype') == 'new_npc') {
                     if (action_state == 6 && msg.get('id') == 'snow_fist_trainer') {
@@ -2514,26 +2597,81 @@
                         send_cmd('look_npc luoyang_luoyang3');
                     } else if (action_state == 11 && msg.get('id') == 'luoyang_luoyang4') {
                         send_cmd('look_npc luoyang_luoyang4');
+                    } else if (action_state == 20 && msg.get('id') == 'qingcheng_weaponor') {
+                        send_cmd('look_npc qingcheng_weaponor');
+                    } else if (action_state == 22 && msg.get('id') == 'snow_herbalist') {
+                        send_cmd('look_npc snow_herbalist');
                     }
-                } else if (action_state == 13 && msg.get('type') == 'vs') {
+                } else if ((action_state == 13 || action_state == 16 || action_state == 19 || action_state == 21) && msg.get('type') == 'vs') {
                     var vs_info = g_obj_map.get('msg_vs_info');
                     var my_id = g_obj_map.get('msg_attrs').get('id');
                     var pos = check_pos(vs_info, my_id);
                     if (pos) {
                         var subtype = msg.get('subtype');
                         if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
+                            if (action_state == 19) {
+                                send_cmd('escape');
+                            }
                             var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
                             var buttons = get_skill_buttons(xdz);
+                            var count = 0, max = 0;
+                            for (var i = 1; i <= 4; i++) {
+                                var kee = vs_info.get((pos[0] == 'vs1' ?  'vs2' : 'vs1') + '_kee' + i);
+                                if (kee && parseInt(kee) > 0) {
+                                    max = Math.max(max, parseInt(kee));
+                                    count++;
+                                }
+                            }
+                            if (count == 1) {
+                                if (max < 1000) {
+                                    for (var i = 0; i < dodge_skills.length - 1; i++) {
+                                        var j = $.inArray(dodge_skills[i], buttons);
+                                        if (j >= 0) {
+                                            send_cmd('playskill ' + (j + 1));
+                                            return;
+                                        }
+                                    }
+                                }
+                            } else if (count > 2) {
+                                var i = $.inArray('千影百伤棍', buttons);
+                                if (i < 0) {
+                                    i = $.inArray('破军棍诀', buttons);
+                                }
+                                if (i >= 0) {
+                                    send_cmd('playskill ' + (i + 1));
+                                    return;
+                                }
+                            }
                             if (!select_perform(buttons, true)) {
                                 send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
                             }
                         } else if (subtype == 'combat_result') {
-                            send_cmd('swords fight_test go');
+                            if (action_state == 13) {
+                                send_cmd('swords fight_test go');
+                            } else if (action_state == 16) {
+                                var room = get_room_name();
+                                if (room == '寒冰之湖') {
+                                    send_cmd('event_1_95129086;kill bingyuegu_xuanwujiguanshou');
+                                } else if (room == '冰月湖心') {
+                                    send_cmd('event_1_17623983;say');
+                                    action_state = 17;
+                                } else if (room == '九幽之洞') {
+                                    send_cmd('s;kill bingyuegu_bingyuexianren');
+                                } else if (room == '冰月湖底') {
+                                    send_cmd('say');
+                                    action_state = 18;
+                                }
+                            } else if (action_state == 19) {
+                                send_cmd('say');
+                            } else if (action_state == 21) {
+                                send_cmd('jh 1;e;n;n;n;w;look_npc snow_herbalist');
+                                action_state = 22;
+                            }
                         }
                     }
                 } else if (action_state == 14 && msg.get('type') == 'show_html_page') {
                     do_answer(msg, function() {
-                        stop_task('finish!');
+                        send_cmd('say');
                         action_state = 15;
                     });
                 } else if (msg.get('type') == 'notice' && msg.get('subtype') == 'notify_fail') {
@@ -2541,12 +2679,37 @@
                         send_cmd('question');
                         action_state = 14;
                     } else if (action_state == 14 && /^每日武林知识问答次数已经达到限额，请明天再来。/.test(msg.get('msg'))) {
-                        stop_task('finish!');
+                        send_cmd('say');
                         action_state = 15;
+                    } else if (action_state == 16 && /^今天进入冰月谷的次数已达到上限。/.test(msg.get('msg'))) {
+                        send_cmd('say');
+                        action_state = 18;
+                    } else if (action_state == 19 && /^目前无法走动去那里。/.test(msg.get('msg'))) {
+                        send_cmd('say');
+                        action_state = 20;
+                    } else if (action_state == 21 && /^你今天已经收获累累，同时也消耗了大量元气和体力，请大侠隔日再来射雕。/.test(removeSGR(msg.get('msg')))) {
+                        send_cmd('jh 1;e;n;n;n;w;look_npc snow_herbalist');
+                        action_state = 22;
+                    } else if (action_state == 26 && /^炼药的丹炉已经是滚得发烫，再炼下去恐怕就要裂了。明天再来吧！/.test(msg.get('msg'))) {
+                        send_cmd('jh 39;ne;e;n;ne;ne;n;ne;nw;event_1_58460791;say');
+                        action_state = 27;
+                    }
+                } else if (msg.get('type') == 'notice') {
+                    if (action_state == 21 && /^(你对天空中移动的黑点瞄准了许久|你摩拳擦掌，鼓足力气，准备开始拉弓|你闭目许久后，突然开眼果断射出一箭|你迅捷地连射三箭|你一箭精准地直接贯穿白尾雕右翼)/.test(removeSGR(msg.get('msg')))) {
+                        send_cmd('shediao');
+                    } else if (action_state == 26 && /^你先把毒琥珀放置于丹炉之中，然后使用内力控制着火候，等待着下一步骤时机的到来。/.test(removeSGR(msg.get('msg')))) {
+                        setTimeout(function() {
+                            send_cmd('lianyao');
+                        }, 6000);
+                    }
+                } else if (msg.get('type') == 'unknow_command') {
+                    if (action_state == 16) {
+                        send_cmd('say');
+                        action_state = 18;
                     }
                 }
             });
-            var cmds = [];
+            var cmds = [ 'home' ];
             for (var i = 1; i <= 7; i++) {
                 cmds.push('share_ok ' + i);
             }
@@ -2873,7 +3036,7 @@
                     if (count < total) {
                         send_cmd('question');
                     } else {
-                        stop_task('finish!');
+                        fn();
                     }
                 } else if (data.indexOf('回答错误！') >= 0) {
                     log('answer is wrong!');
@@ -2898,6 +3061,19 @@
                 }
             }
         }
+    }
+    function get_item(name, in_store) {
+        var items = g_obj_map.get('msg_items');
+        for (var i = 1; i <= parseInt(items.get('max_bag_num')); i++) {
+            var item = items.get((in_store ? 'stores' : 'items') + i);
+            if (item) {
+                var arr = item.split(',');
+                if (arr[0] == name || removeSGR(arr[1]) == name) {
+                    return arr;
+                }
+            }
+        }
+        return null;
     }
     function get_area(name) {
         if (name == '光明顶') {
@@ -3506,7 +3682,7 @@
 	var _show_score = window.gSocketMsg2.show_score;
 	window.gSocketMsg2.show_score = function() {
 		_show_score.apply(this, arguments);
-        var $td = $('<td><button type="button" onclick="execute_cmd(\'#daily\');" class="cmd_click2"><span style="color:red;">自动<br>每日</span></button></td>');
+        var $td = $('<td><button type="button" onclick="execute_cmd(\'#daily\');" class="cmd_click2"><span style="color:red;">一键<br>每日</span></button></td>');
         var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
         if ($('> td', $tr).length >= 4) {
             $tr = $tr.parent().append('<tr></tr>');
