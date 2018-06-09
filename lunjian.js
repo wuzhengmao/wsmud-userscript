@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.04
+// @version      1.1.0.05
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -28,6 +28,7 @@
 // v1.1.0.03 2018.06.09 完善一键日常功能
 // v1.1.0.04 2018.06.09 在状态页面增加脚本按钮，#t+ party和#t+ guild改成#party和#guild
 //                      直接在奇侠页面后增加领取朱果的链接，改进天剑谷
+// v1.1.0.05 2018.06.09 为物品窗口增加了全卖、全分解、全合成的功能
 
 (function(window) {
     'use strict';
@@ -321,6 +322,10 @@
 	}
 	var _dispatch_message = window.gSocketMsg.dispatchMessage;
 	window.gSocketMsg.dispatchMessage = function(msg) {
+        if (msg.get('type') == 'notice' && /^你使用3颗.+、50000银两合成了1颗.+。/.test(msg.get('msg'))) {
+            msg.put('type', 'main_msg');
+            msg.put('subtype', 'ctext');
+        }
 		for ( var i = 0; i < message_listeners.length; i++) {
 			var listener = message_listeners[i];
 			if (listener.is_pre
@@ -3183,6 +3188,18 @@
         }
         return null;
     }
+    function has_cmd(msg, name) {
+        for (var i = 1; ; i++) {
+            var cmd_name = msg.get('cmd' + i + '_name');
+            if (!cmd_name) {
+                break;
+            }
+            if (removeSGR(cmd_name) == name) {
+                return true;
+            }
+        }
+        return false;
+    }
     function get_area(name) {
         if (name == '光明顶') {
             name = '明教';
@@ -3749,6 +3766,15 @@
 	};
     enhance_combat();
 
+    function append_button(btn) {
+        var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
+        if ($('> td', $tr).length >= 4) {
+            var $tbl = $tr.parent();
+            $tr = $('<tr></tr>');
+            $tbl.append($tr);
+        }
+        $tr.append(btn);
+    }
 	var qixia_id_pattern = /^(langfuyu|wangrong|pangtong|liyufei|bujinghong|fengxingzhui|guoji|wuzhen|fengnan|huoyunxieshen|niwufeng|hucangyan|huzhu|xuanyueyan|langjuxu|liejiuzhou|mumiaoyu|yuwenwudi|lixuanba|babulongjiang|fengwuhen|licangruo|xiaqing|miaowuxin|wuyeju)_/;
 	var _show_npc = window.gSocketMsg2.show_npc;
 	window.gSocketMsg2.show_npc = function() {
@@ -3757,14 +3783,8 @@
 		if (qixia_id_pattern.test(id)) {
 			var cmd = 'ask ' + id + '\\n' + 'ask ' + id + '\\n' + 'ask ' + id
 					+ '\\n' + 'ask ' + id + '\\n' + 'ask ' + id;
-			var $td = $('<td align="center"><button type="button" onclick="clickButton(\''
-					+ cmd + '\', 1)" class="cmd_click2">领朱果</button></td>');
-			var $tr = $('#out > span.out button.cmd_click2:last').parent('td')
-					.parent();
-			if ($('> td', $tr).length >= 4) {
-				$tr = $tr.parent().append('<tr></tr>');
-			}
-			$tr.append($td);
+			append_button('<td align="center"><button type="button" onclick="clickButton(\''
+					+ cmd + '\', 1)" class="cmd_click2"><span style="color:red;">领朱果</span></button></td>');
 		} else if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
 			var $e, do_kill = false;
 			$('#out > span.out button.cmd_click2').each(function() {
@@ -3775,16 +3795,57 @@
 				}
 			});
 			if (do_kill) {
-				var $td = $('<td align="center"><button type="button" class="cmd_click2">卡位</button></td>');
+				var $td = $('<td align="center"><button type="button" class="cmd_click2"><span style="color:red;">卡位</span></button></td>');
 				$('button', $td).click(kill);
-				var $tr = $('#out > span.out button.cmd_click2:last').parent(
-						'td').parent();
-				if ($('> td', $tr).length >= 4) {
-					$tr = $tr.parent().append('<tr></tr>');
-				}
-				$tr.append($td);
+				append_button($td);
 			}
 		}
+	};
+	var _show_item_info = window.gSocketMsg2.show_item_info;
+	window.gSocketMsg2.show_item_info = function() {
+		_show_item_info.apply(this, arguments);
+		var item = g_obj_map.get('msg_item');
+        var re = new RegExp('(卖|分|合).+(' + item.get('unit') + '|次)'), need_arrange = false;
+        $('#out > span.out button.cmd_click2').parent('td').each(function() {
+            var label = $(this).text();
+            if (label == '卖掉' && parseInt(item.get('amount')) > 1) {
+                $(this).after('<td align="center"><button type="button" onclick="clickButton(\'client_prompt items sell '
+					+ item.get('id') + '_N_' + item.get('amount')
+                    + '\', 1)" class="cmd_click2"><span style="color:red;">全卖</span></button></td>');
+                need_arrange = true;
+            } else if (label == '分解' && parseInt(item.get('amount')) > 1) {
+                $(this).after('<td align="center"><button type="button" onclick="clickButton(\'client_prompt items splite '
+					+ item.get('id') + '_N_' + item.get('amount')
+                    + '\', 1)" class="cmd_click2"><span style="color:red;">全分解</span></button></td>');
+                need_arrange = true;
+            } else if (label == '合成') {
+                var i = Math.floor(parseInt(item.get('amount')) / 3);
+                if (i > 1) {
+                    $(this).after('<td align="center"><button type="button" onclick="clickButton(\'client_prompt items hecheng '
+                              + item.get('id') + '_N_' + i
+                              + '\', 1)" class="cmd_click2"><span style="color:red;">全合成</span></button></td>');
+                    need_arrange = true;
+                }
+            } else if (re.test(label)) {
+                $(this).detach();
+                need_arrange = true;
+            }
+        });
+        if (need_arrange) {
+            var all = $('#out > span.out button.cmd_click2').parent('td');
+            var tbl = all.parent().parent();
+            all.detach();
+            tbl.empty();
+            for (var i = 0; i < all.length / 4; i++) {
+                var $tr = $('<tr></tr>');
+                tbl.append($tr);
+                for (var j = 0; j < 4; j++) {
+                    if (i * 4 + j < all.length) {
+                        $tr.append(all[i * 4 + j]);
+                    }
+                }
+            }
+        }
 	};
 
 	var _show_html_page = window.gSocketMsg.show_html_page;
@@ -3827,13 +3888,7 @@
             label = label.substring(0, 2) + '<br>' + label.substring(2);
         }
         var $td = $('<td><button type="button" onclick="return false;" class="cmd_click2"><span style="color:' + color + ';">' + label + '</span></button></td>');
-        var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
-        if ($('> td', $tr).length >= 4) {
-            var $tbl = $tr.parent();
-            $tr = $('<tr></tr>');
-            $tbl.append($tr);
-        }
-        $tr.append($td);
+        append_button($td);
         $('button', $td).click(fn);
     }
 	var _show_score = window.gSocketMsg2.show_score;
