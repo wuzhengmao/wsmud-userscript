@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.03
+// @version      1.1.0.04
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -26,6 +26,8 @@
 // v1.1.0.01 2018.06.07 改进#t+ pintu，增加#t+ snoop
 // v1.1.0.02 2018.06.08 增加自动每日#daily
 // v1.1.0.03 2018.06.09 完善一键日常功能
+// v1.1.0.04 2018.06.09 在状态页面增加脚本按钮，#t+ party和#t+ guild改成#party和#guild
+//                      直接在奇侠页面后增加领取朱果的链接，改进天剑谷
 
 (function(window) {
     'use strict';
@@ -409,7 +411,7 @@
             }
         }
 	    return fmt;
-	}
+	};
     
     var vs_text = '', defence_performed = false, attack_targets = [];
 	add_listener(
@@ -583,7 +585,10 @@
 		var vs_info = g_obj_map.get('msg_vs_info');
 		var pos = check_pos(vs_info, target_id);
 		if (pos) {
-            $('td#' + pos[0] + pos[1], '.out_top').click();
+            var $e = $('td#' + pos[0] + pos[1], '.out_top');
+            if ($e.length > 0 && $e.hasClass('attack_target')) {
+                $e.click();
+            }
 		} else {
             console.log('target ' + target_id + ' not found');
         }
@@ -1047,8 +1052,7 @@
 		return null;
 	}
 	var task_h_timer, task_h_listener, connect_trigger, pintu_trigger, taofan_trigger,
-            qinglong_trigger, biaoche_trigger, party_trigger, guild_trigger, task_trigger,
-            snoop_trigger;
+            qinglong_trigger, biaoche_trigger, task_trigger, snoop_trigger;
 	function stop_task(msg) {
 		if (task_h_timer) {
 			clearInterval(task_h_timer);
@@ -1091,7 +1095,7 @@
         }, true);
         send_cmd('say');
     }
-	window.execute_cmd = function(cmd) {
+	function execute_cmd(cmd) {
 		if (cmd.substr(0, 6) == '#loop ') {
 			cmd = $.trim(cmd.substr(6));
 			if (cmd) {
@@ -1256,41 +1260,125 @@
 			}
 		} else if (cmd == '#tianjiangu') {
 			log('starting tianjiangu combat...');
-			add_task_listener(['jh', 'vs'], '', function(msg) {
-				if (msg.get('type') == 'jh' && (msg.get('subtype') == 'info'
-						|| msg.get('subtype') == 'new_npc' || msg.get('subtype') == 'dest_npc')) {
-					var msg_room = g_obj_map.get('msg_room');
-					var target;
-					for (var i = 1; ; i++) {
-						var npc = msg_room.get('npc' + i);
-						if (!npc) {
-							break;
-						}
-						var arr = npc.split(',');
-						if (arr.length > 1) {
-							arr[1] = removeSGR(arr[1]);
-							if (arr[1] == '天剑真身' || arr[1] == '天剑'
-									|| arr[1] == '虹风' || arr[1] == '虹雨'
-									|| arr[1] == '虹雷' || arr[1] == '虹电') {
-								target = arr[0];
-							} else if (!target && arr[1] == '天剑谷卫士') {
-								target = arr[0];
-							}
-						}
-					}
-					if (target) {
-						clickButton('kill ' + target);
-					}
+            var dirs = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+            var tracks = new Map(), members = [], is_leader = false, target;
+			add_task_listener(['jh', 'team', 'look_npc', 'vs'], '', function(msg) {
+                if (msg.get('type') == 'team' && msg.get('subtype') == 'info') {
+                    members = [];
+                    for (var i = 1; i <= parseInt(msg.get('max_member_num')); i++) {
+                        var member = msg.get('member' + i);
+                        if (member) {
+                            members.push(removeSGR(member.split(',')[1]));
+                        }
+                    }
+                    is_leader = !!msg.get('is_leader');
+                    console.log('members: ' + members.join(',') + ', is_leader: ' + is_leader);
+                } else if (msg.get('type') == 'jh' && msg.get('subtype') == 'info') {
+					var room = g_obj_map.get('msg_room'), key = '|';
+                    for (var i = 0; i < dirs.length; i++) {
+                        var t = room.get(dirs[i]);
+                        if (t) {
+                            key += t + '|';
+                        }
+                    }
+                    if (/\|峡谷\d+\|/.test(key)) {
+                        target = undefined;
+                        for (var i = 1; ; i++) {
+                            var npc = room.get('npc' + i);
+                            if (!npc) {
+                                break;
+                            }
+                            var arr = npc.split(',');
+                            if (arr.length > 1) {
+                                arr[1] = removeSGR(arr[1]);
+                                if (arr[1] == '天剑' || arr[1] == '虹风' || arr[1] == '虹雨'
+                                    || arr[1] == '虹雷' || arr[1] == '虹电') {
+                                    target = arr[0];
+                                    break;
+                                }
+                            }
+                        }
+                        if (target) {
+                            clickButton('look_npc ' + target);
+                        } else if (is_leader) {
+                            var track = tracks.get(room.get('short'));
+                            if (!track) {
+                                track = new Map();
+                                tracks.put(room.get('short'), track);
+                            }
+                            var t = track.get(key);
+                            if (!t) {
+                                t = [];
+                                track.put(key, t);
+                            }
+                            var spec_list = [], other_list = [];
+                            for (var i = 0; i < dirs.length; i++) {
+                                var name = room.get(dirs[i]);
+                                if (name) {
+                                    if (/^峡谷\d+/.test(name)) {
+                                        other_list.push(i);
+                                    } else {
+                                        spec_list.push(i);
+                                    }
+                                }
+                            }
+                            var select = -1;
+                            for (var i = 0; i < spec_list.length; i++) {
+                                if (t.indexOf(spec_list[i]) < 0) {
+                                    select = spec_list[i];
+                                    break;
+                                }
+                            }
+                            if (select < 0) {
+                                for (var i = 0; i < other_list.length; i++) {
+                                    if (t.indexOf(other_list[i]) < 0) {
+                                        select = other_list[i];
+                                        break;
+                                    }
+                                }
+                            }
+                            if (select < 0) {
+                                other_list = other_list.concat(spec_list);
+                                select = other_list[Math.floor(Math.random() * other_list.length)];
+                            } else {
+                                t.push(select);
+                            }
+                            console.log(room.get('short') + ': ' + key + ' ' + dirs[select]);
+                            var cmd = 'go ' + dirs[select];
+                            var random = room.get('go_random');
+                            if (random) {
+                                cmd += '.' + random;
+                            }
+                            send_cmd(cmd);
+                        }
+                    }
+				} else if (msg.get('type') == 'look_npc' && msg.get('id') == target) {
+                    var desc = msg.get('long');
+                    var r = desc.match(/正与\s*(.+)\s*激烈争斗中/);
+                    if (r) {
+                        var arr = $.trim(removeSGR(r[1])).split(/\s+/), check_ok = true;
+                        for (var i = 0; i < arr.length; i++) {
+                            if (members.indexOf(arr[i]) < 0) {
+                                check_ok = false;
+                                break;
+                            }
+                        }
+                        if (check_ok) {
+                            clickButton('kill ' + target);
+                        }
+                    } else {
+                        clickButton('kill ' + target);
+                    }
 				} else if (msg.get('type') == 'vs') {
 					if (msg.get('subtype') == 'combat_result') {
 						clickButton('prev_combat');
-					} else {
-						var vs_info = g_obj_map.get('msg_vs_info');
-						var my_id = g_obj_map.get('msg_attrs').get('id');
-						auto_combat(vs_info, my_id, msg);
+                        send_cmd('golook_room');
+					} else if (msg.get('subtype') == 'vs_info' && !msg.get('is_watcher')) {
+						set_attack_target(target);
 					}
 				}
 			});
+            send_cmd('team;prev;golook_room');
 		} else if (cmd == '#question') {
             log('starting auto answer question...');
 			add_task_listener('show_html_page', '', function(msg) {
@@ -1579,6 +1667,12 @@
 			log('pintu trigger closed');
 			remove_listener(pintu_trigger);
 			pintu_trigger = undefined;
+        } else if (cmd == '#tr pintu') {
+            if (!pintu_trigger) {
+                execute_cmd('#t+ pintu');
+            } else {
+                execute_cmd('#t- pintu');
+            }
 		} else if ((cmd == '#t+ taofan' || cmd == '#t+ taofan 1' || cmd == '#t+ taofan 2') && !taofan_trigger) {
 			log('open taofan trigger...');
 			var taofan_target = kuafu + (cmd == '#t+ taofan 2' ? '段老大' : '无一'), taofan_id, action_state = 0;
@@ -1655,6 +1749,12 @@
 			log('taofan trigger closed');
 			remove_listener(taofan_trigger);
 			taofan_trigger = undefined;
+        } else if (cmd == '#tr taofan') {
+            if (!taofan_trigger) {
+                execute_cmd('#t+ taofan');
+            } else {
+                execute_cmd('#t- taofan');
+            }
 		} else if ((cmd == '#t+ qinglong' || cmd == '#t+ qinglong 1' || cmd == '#t+ qinglong 2') && !qinglong_trigger) {
 			log('open qinglong trigger...');
             var qinglong_road, qinglong_target, target_id, action_state = 0;
@@ -1729,6 +1829,12 @@
 			log('qinglong trigger closed');
 			remove_listener(qinglong_trigger);
 			qinglong_trigger = undefined;
+        } else if (cmd == '#tr qinglong') {
+            if (!qinglong_trigger) {
+                execute_cmd('#t+ qinglong');
+            } else {
+                execute_cmd('#t- qinglong');
+            }
 		} else if ((cmd == '#t+ biaoche' || cmd == '#t+ biaoche 1' || cmd == '#t+ biaoche 2') && !biaoche_trigger) {
 			log('open biaoche trigger...');
             var biaoche_road, biaoche_target, target_id, action_state = 0;
@@ -1788,14 +1894,20 @@
 			log('biaoche trigger closed');
 			remove_listener(biaoche_trigger);
 			biaoche_trigger = undefined;
-		} else if (cmd == '#t+ party' && !party_trigger) {
-			log('open party trigger...');
+        } else if (cmd == '#tr biaoche') {
+            if (!biaoche_trigger) {
+                execute_cmd('#t+ biaoche');
+            } else {
+                execute_cmd('#t- biaoche');
+            }
+		} else if (cmd == '#party') {
+			log('start auto party...');
             var action, area, rooms, npc, item, current_room, action_state = 0;
-            party_trigger = add_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
+            add_task_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
                 if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
                     var data = removeLink(removeSGR(msg.get('msg')));
                     if (data.indexOf('今天做的师门任务已过量，明天再来。') == 0) {
-                        execute_cmd('#t- party');
+                        stop_task('finish!');
                         return;
                     }
                     if (data.indexOf('现在没有任务，好好练功吧！！') >= 0) {
@@ -1947,18 +2059,15 @@
                     }
                 }
             });
-		} else if (cmd == '#t- party' && party_trigger) {
-			log('party trigger closed');
-			remove_listener(party_trigger);
-			party_trigger = undefined;
- 		} else if (cmd == '#t+ guild' && !guild_trigger) {
-			log('open guild trigger...');
+            send_cmd('home;family_quest');
+ 		} else if (cmd == '#guild') {
+			log('start auto guild...');
             var action, area, rooms, npc, item, current_room, action_state = 0;
-            guild_trigger = add_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
+            add_task_listener(['main_msg', 'jh', 'vs'], '', function(msg) {
                 if (msg.get('type') == 'main_msg' && msg.get('ctype') == 'text') {
                     var data = removeLink(removeSGR(msg.get('msg')));
                     if (data.indexOf('今天做的帮派任务已过量，明天再来。') == 0) {
-                        execute_cmd('#t- guild');
+                        stop_task('finish!');
                         return;
                     }
                     if (data.indexOf('现在没有任务，好好练功吧！！') >= 0) {
@@ -2110,10 +2219,7 @@
                     }
                 }
             });
-		} else if (cmd == '#t- guild' && guild_trigger) {
-			log('guild trigger closed');
-			remove_listener(guild_trigger);
-			guild_trigger = undefined;
+            send_cmd('clan scene;clan task');
  		} else if (cmd == '#t+ task' && !task_trigger) {
 			log('open task trigger...');
             var go_npc_patterns = [
@@ -2316,6 +2422,12 @@
 			log('task trigger closed');
 			remove_listener(task_trigger);
 			task_trigger = undefined;
+        } else if (cmd == '#tr task') {
+            if (!task_trigger) {
+                execute_cmd('#t+ task');
+            } else {
+                execute_cmd('#t- task');
+            }
 		} else if (cmd == '#t+ snoop' && !snoop_trigger) {
 			log('open snoop trigger...');
 			snoop_trigger = add_listener('channel', '', function(msg) {
@@ -2340,6 +2452,12 @@
 			log('snoop trigger closed');
 			remove_listener(snoop_trigger);
 			snoop_trigger = undefined;
+        } else if (cmd == '#tr snoop') {
+            if (!snoop_trigger) {
+                execute_cmd('#t+ snoop');
+            } else {
+                execute_cmd('#t- snoop');
+            }
 		} else if (cmd == '#mapid') {
             var room = g_obj_map.get('msg_room');
             if (room && room.get('map_id')) {
@@ -2672,6 +2790,12 @@
 			log('connect trigger closed');
 			remove_listener(connect_trigger);
 			connect_trigger = undefined;
+        } else if (cmd == '#tr connect') {
+            if (!connect_trigger) {
+                execute_cmd('#t+ connect');
+            } else {
+                execute_cmd('#t- connect');
+            }
 		} else if (cmd == '#connect') {
             g_delay_connect = 0;
             connectServer();
@@ -3426,7 +3550,7 @@
 		if (!cmd_busy) {
 			_send_cmd(k);
 		}
-	}
+	};
 	var _send_cmd = function(k) {
 		if (cmd_queue.length > 0) {
 			cmd_busy = true;
@@ -3663,16 +3787,103 @@
 		}
 	};
 
+	var _show_html_page = window.gSocketMsg.show_html_page;
+	window.gSocketMsg.show_html_page = function() {
+		_show_html_page.apply(this, arguments);
+        if ($('div#out > span.out > span.out3').text() == '江湖奇侠成长信息') {
+            $('div#out > span.out tr').each(function() {
+                var $td = $('td:first', this);
+                var text = $td.text();
+                if (text.indexOf('朱果') < 0) {
+                    if (!/\(\d+\)/.test(text)) {
+                        $td.append('&nbsp;');
+                    }
+                    var $a = $('a:first', $td);
+                    var r = $a.attr('href').match(/clickButton\(\'(.+)\'\s*,\s*0\)/);
+                    if (r) {
+                        var link = $('<a style="text-decoration:underline;color:cyan" href="javascript:void(0);">朱果</a>');
+                        $td.append(link);
+                        link.click(function() {
+                            clickButton(r[1]);
+                            todo(function() {
+                                var target = find_target($a.text(), [ 'npc' ]);
+                                if (target) {
+                                    var cmds = [];
+                                    for (var i = 0; i < 5; i++) {
+                                        cmds.push('ask ' + target[0]);
+                                    }
+                                    clickButton(cmds.join('\n'));
+                                }
+                            });
+                        });
+                    }
+                }
+            });
+        }
+    };
+    
+    function create_button(label, color, fn) {
+        if (label.length > 3) {
+            label = label.substring(0, 2) + '<br>' + label.substring(2);
+        }
+        var $td = $('<td><button type="button" onclick="return false;" class="cmd_click2"><span style="color:' + color + ';">' + label + '</span></button></td>');
+        var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
+        if ($('> td', $tr).length >= 4) {
+            var $tbl = $tr.parent();
+            $tr = $('<tr></tr>');
+            $tbl.append($tr);
+        }
+        $tr.append($td);
+        $('button', $td).click(fn);
+    }
 	var _show_score = window.gSocketMsg2.show_score;
 	window.gSocketMsg2.show_score = function() {
 		_show_score.apply(this, arguments);
-        var $td = $('<td><button type="button" onclick="execute_cmd(\'#daily\');" class="cmd_click2"><span style="color:red;">一键<br>每日</span></button></td>');
-        var $tr = $('#out > span.out button.cmd_click2:last').parent('td').parent();
-        if ($('> td', $tr).length >= 4) {
-            $tr = $tr.parent().append('<tr></tr>');
-        }
-        $tr.append($td);
-	};
+        create_button('自动重连', 'lime', function() {
+            execute_cmd('#tr connect');
+        });
+        create_button('回显指令', 'lime', function() {
+            execute_cmd('#echo');
+        });
+        create_button('跨服青龙','lime', function() {
+            execute_cmd('#tr qinglong');
+        });
+        create_button('跨服逃犯','lime', function() {
+            execute_cmd('#tr taofan');
+        });
+        create_button('跨服镖车','lime', function() {
+            execute_cmd('#tr biaoche');
+        });
+        create_button('拼图碎片', 'lime', function() {
+            send_cmd('jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721');
+            execute_cmd('#tr pintu');
+        });
+        create_button('谜题辅助', 'lime', function() {
+            execute_cmd('#tr task');
+        });
+        create_button('一键每日', 'red', function() {
+            execute_cmd('#daily');
+        });
+        create_button('自动师门', 'red', function() {
+            execute_cmd('#party');
+        });
+        create_button('自动帮派', 'red', function() {
+            execute_cmd('#guild');
+        });
+        create_button('天剑谷', 'red', function() {
+            execute_cmd('#tianjiangu');
+        });
+        create_button('回血回内', 'red', function() {
+            execute_cmd('#heal');
+        });
+        create_button('击杀年兽', 'red', function() {
+            send_cmd('jh 1;e;n;n;n;n;n');
+            execute_cmd('#kill 年兽');
+        });
+        create_button('停止任务', 'red', function() {
+            execute_cmd('#stop');
+        });
+ 	};
     
     log('addon loaded');
     }, 1000);
