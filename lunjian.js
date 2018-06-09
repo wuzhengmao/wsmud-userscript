@@ -1938,18 +1938,8 @@
                 } else if ((action_state == 3 || action_state == 4) && msg.get('type') == 'vs') {
                     var vs_info = g_obj_map.get('msg_vs_info');
                     var my_id = g_obj_map.get('msg_attrs').get('id');
-                    var pos = check_pos(vs_info, my_id);
-                    if (!pos) {
-                        send_cmd('escape;say');
-                        action_state = 1;
-                        return;
-                    }
                     if (msg.get('subtype') == 'add_xdz' && msg.get('uid') == my_id) {
-                        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
-                        var buttons = get_skill_buttons(xdz);
-                        if (!select_perform(buttons, true)) {
-                            send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
-                        }
+                        fast_perform(vs_info, my_id);
                     }
                 } else if (action_state == 4 && msg.get('type') == 'jh' && msg.get('subtype') == 'new_item') {
                     if (removeSGR(msg.get('name')) == npc + '的尸体') {
@@ -2111,18 +2101,8 @@
                 } else if ((action_state == 3 || action_state == 4) && msg.get('type') == 'vs') {
                     var vs_info = g_obj_map.get('msg_vs_info');
                     var my_id = g_obj_map.get('msg_attrs').get('id');
-                    var pos = check_pos(vs_info, my_id);
-                    if (!pos) {
-                        send_cmd('escape;say');
-                        action_state = 1;
-                        return;
-                    }
                     if (msg.get('subtype') == 'add_xdz' && msg.get('uid') == my_id) {
-                        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
-                        var buttons = get_skill_buttons(xdz);
-                        if (!select_perform(buttons, true)) {
-                            send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
-                        }
+                        fast_perform(vs_info, my_id);
                     }
                 } else if (action_state == 4 && msg.get('type') == 'jh' && msg.get('subtype') == 'new_item') {
                     if (removeSGR(msg.get('name')) == npc + '的尸体') {
@@ -2605,68 +2585,33 @@
                 } else if ((action_state == 13 || action_state == 16 || action_state == 19 || action_state == 21) && msg.get('type') == 'vs') {
                     var vs_info = g_obj_map.get('msg_vs_info');
                     var my_id = g_obj_map.get('msg_attrs').get('id');
-                    var pos = check_pos(vs_info, my_id);
-                    if (pos) {
-                        var subtype = msg.get('subtype');
-                        if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
-                            if (action_state == 19) {
-                                send_cmd('escape');
-                            }
-                            var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
-                            var buttons = get_skill_buttons(xdz);
-                            var count = 0, max = 0;
-                            for (var i = 1; i <= 4; i++) {
-                                var kee = vs_info.get((pos[0] == 'vs1' ?  'vs2' : 'vs1') + '_kee' + i);
-                                if (kee && parseInt(kee) > 0) {
-                                    max = Math.max(max, parseInt(kee));
-                                    count++;
-                                }
-                            }
-                            if (count == 1) {
-                                if (max < 1000) {
-                                    for (var i = 0; i < dodge_skills.length - 1; i++) {
-                                        var j = $.inArray(dodge_skills[i], buttons);
-                                        if (j >= 0) {
-                                            send_cmd('playskill ' + (j + 1));
-                                            return;
-                                        }
-                                    }
-                                }
-                            } else if (count > 2) {
-                                var i = $.inArray('千影百伤棍', buttons);
-                                if (i < 0) {
-                                    i = $.inArray('破军棍诀', buttons);
-                                }
-                                if (i >= 0) {
-                                    send_cmd('playskill ' + (i + 1));
-                                    return;
-                                }
-                            }
-                            if (!select_perform(buttons, true)) {
-                                send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
-                            }
-                        } else if (subtype == 'combat_result') {
-                            if (action_state == 13) {
-                                send_cmd('swords fight_test go');
-                            } else if (action_state == 16) {
-                                var room = get_room_name();
-                                if (room == '寒冰之湖') {
-                                    send_cmd('event_1_95129086;kill bingyuegu_xuanwujiguanshou');
-                                } else if (room == '冰月湖心') {
-                                    send_cmd('event_1_17623983;say');
-                                    action_state = 17;
-                                } else if (room == '九幽之洞') {
-                                    send_cmd('s;kill bingyuegu_bingyuexianren');
-                                } else if (room == '冰月湖底') {
-                                    send_cmd('say');
-                                    action_state = 18;
-                                }
-                            } else if (action_state == 19) {
+                    var subtype = msg.get('subtype');
+                    if (subtype == 'add_xdz' && msg.get('uid') == my_id) {
+                        if (action_state == 19) {
+                            send_cmd('escape');
+                        }
+                        fast_perform(vs_info, my_id);
+                    } else if (subtype == 'combat_result') {
+                        if (action_state == 13) {
+                            send_cmd('swords fight_test go');
+                        } else if (action_state == 16) {
+                            var room = get_room_name();
+                            if (room == '寒冰之湖') {
+                                send_cmd('event_1_95129086;kill bingyuegu_xuanwujiguanshou');
+                            } else if (room == '冰月湖心') {
+                                send_cmd('event_1_17623983;say');
+                                action_state = 17;
+                            } else if (room == '九幽之洞') {
+                                send_cmd('s;kill bingyuegu_bingyuexianren');
+                            } else if (room == '冰月湖底') {
                                 send_cmd('say');
-                            } else if (action_state == 21) {
-                                send_cmd('jh 1;e;n;n;n;w;look_npc snow_herbalist');
-                                action_state = 22;
+                                action_state = 18;
                             }
+                        } else if (action_state == 19) {
+                            send_cmd('say');
+                        } else if (action_state == 21) {
+                            send_cmd('jh 1;e;n;n;n;w;look_npc snow_herbalist');
+                            action_state = 22;
                         }
                     }
                 } else if (action_state == 14 && msg.get('type') == 'show_html_page') {
@@ -2867,6 +2812,45 @@
 			}
 		}
 	}
+    function fast_perform(vs_info, my_id) {
+		var pos = check_pos(vs_info, my_id);
+		if (!pos) {
+			return;
+		}
+        var xdz = parseInt(vs_info.get(pos[0] + '_xdz' + pos[1]));
+        var buttons = get_skill_buttons(xdz);
+        var count = 0, max = 0;
+        for (var i = 1; i <= 4; i++) {
+            var kee = vs_info.get((pos[0] == 'vs1' ?  'vs2' : 'vs1') + '_kee' + i);
+            if (kee && parseInt(kee) > 0) {
+                max = Math.max(max, parseInt(kee));
+                count++;
+            }
+        }
+        if (count == 1) {
+            if (max < 1000) {
+                for (var i = 0; i < dodge_skills.length - 1; i++) {
+                    var j = $.inArray(dodge_skills[i], buttons);
+                    if (j >= 0) {
+                        send_cmd('playskill ' + (j + 1));
+                        return;
+                    }
+                }
+            }
+        } else if (count > 2) {
+            var i = $.inArray('千影百伤棍', buttons);
+            if (i < 0) {
+                i = $.inArray('破军棍诀', buttons);
+            }
+            if (i >= 0) {
+                send_cmd('playskill ' + (i + 1));
+                return;
+            }
+        }
+        if (!select_perform(buttons, true)) {
+            send_cmd('playskill ' + (Math.floor(Math.random() * 4) + 1));
+        }
+    }
     function do_recovery(callback) {
         send_cmd('jh 1;e;n;n;n;w;attrs;say');
         var action_state = 1, heal_count = 0, dodge_count = 0;
