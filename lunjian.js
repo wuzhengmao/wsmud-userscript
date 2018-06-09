@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         lunjian
 // @namespace    http://mingy.org/
-// @version      1.1.0.05
+// @version      1.1.0.06
 // @description  lunjian extension
 // @updateURL    https://github.com/wuzhengmao/wsmud-userscript/raw/master/lunjian.js
 // @author       Mingy
@@ -29,6 +29,7 @@
 // v1.1.0.04 2018.06.09 在状态页面增加脚本按钮，#t+ party和#t+ guild改成#party和#guild
 //                      直接在奇侠页面后增加领取朱果的链接，改进天剑谷
 // v1.1.0.05 2018.06.09 为物品窗口增加了全卖、全分解、全合成的功能
+// v1.1.0.06 2018.06.10 修复每日冰月3的BUG
 
 (function(window) {
     'use strict';
@@ -2567,7 +2568,7 @@
                         } else if (action_state == 16) {
                             send_cmd('jh 14;w;n;n;n;n;event_1_32682066;event_1_48044005;kill bingyuegu_binglinshou');
                         } else if (action_state == 17) {
-                            if (get_room_name() == '九幽之洞') {
+                            if (get_room_name() == '冰月之渊') {
                                 send_cmd('event_1_41741346;kill bingyuegu_jiuyoumoling');
                             } else {
                                 send_cmd('say');
@@ -2705,7 +2706,8 @@
                     } else if (action_state == 22 && msg.get('id') == 'snow_herbalist') {
                         send_cmd('look_npc snow_herbalist');
                     }
-                } else if ((action_state == 13 || action_state == 16 || action_state == 19 || action_state == 21) && msg.get('type') == 'vs') {
+                } else if ((action_state == 13 || action_state == 16 || action_state == 17
+                            || action_state == 19 || action_state == 21) && msg.get('type') == 'vs') {
                     var vs_info = g_obj_map.get('msg_vs_info');
                     var my_id = g_obj_map.get('msg_attrs').get('id');
                     var subtype = msg.get('subtype');
@@ -2724,7 +2726,10 @@
                             } else if (room == '冰月湖心') {
                                 send_cmd('event_1_17623983;say');
                                 action_state = 17;
-                            } else if (room == '九幽之洞') {
+                            }
+                        } else if (action_state == 17) {
+                            var room = get_room_name();
+                            if (room == '九幽之洞') {
                                 send_cmd('s;kill bingyuegu_bingyuexianren');
                             } else if (room == '冰月湖底') {
                                 send_cmd('say');
