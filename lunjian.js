@@ -592,7 +592,7 @@
 		var pos = check_pos(vs_info, target_id);
 		if (pos) {
             var $e = $('td#' + pos[0] + pos[1], '.out_top');
-            if ($e.length > 0 && $e.hasClass('attack_target')) {
+            if ($e.length > 0 && !$e.hasClass('attack_target')) {
                 $e.click();
             }
 		} else {
