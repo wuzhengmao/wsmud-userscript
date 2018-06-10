@@ -3915,8 +3915,12 @@
             execute_cmd('#tr biaoche');
         });
         create_button('拼图碎片', 'lime', function() {
-            send_cmd('jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721');
-            execute_cmd('#tr pintu');
+            if (!pintu_trigger) {
+                send_cmd('jh 2;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;n;w;s;s;s;s;e;event_1_2215721');
+                execute_cmd('#t+ pintu');
+            } else {
+                execute_cmd('#t- pintu');
+            }
         });
         create_button('谜题辅助', 'lime', function() {
             execute_cmd('#tr task');
