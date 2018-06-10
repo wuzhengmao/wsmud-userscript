@@ -29,7 +29,7 @@
 // v1.1.0.04 2018.06.09 在状态页面增加脚本按钮，#t+ party和#t+ guild改成#party和#guild
 //                      直接在奇侠页面后增加领取朱果的链接，改进天剑谷
 // v1.1.0.05 2018.06.09 为物品窗口增加了全卖、全分解、全合成的功能
-// v1.1.0.06 2018.06.10 修复每日冰月3的BUG
+// v1.1.0.06 2018.06.10 修复每日冰月3的BUG，修复自动锁定目标的BUG，增强秘境的扫荡按钮
 
 (function(window) {
     'use strict';
@@ -3806,6 +3806,7 @@
 			}
 		}
 	};
+    
 	var _show_item_info = window.gSocketMsg2.show_item_info;
 	window.gSocketMsg2.show_item_info = function() {
 		_show_item_info.apply(this, arguments);
@@ -3852,11 +3853,25 @@
             }
         }
 	};
+    
+	var _show_room = window.gSocketMsg2.show_room;
+	window.gSocketMsg2.show_room = function() {
+		_show_room.apply(this, arguments);
+		var room = g_obj_map.get('msg_room');
+        if (has_cmd(room, '扫荡') && secrets.get(get_map_id())) {
+            var $e = $('#out > span.out button.cmd_click3:contains("扫荡")');
+            $e.removeAttr('onclick');
+            $e.click(function() {
+                execute_cmd('#secret');
+            });
+        }
+	};
 
 	var _show_html_page = window.gSocketMsg.show_html_page;
 	window.gSocketMsg.show_html_page = function() {
 		_show_html_page.apply(this, arguments);
-        if ($('div#out > span.out > span.out3').text() == '江湖奇侠成长信息') {
+        if ($('div#out > span.out > span.out3').text() == '江湖奇侠成长信息'
+                && $('div#out > span.out tr td a:contains("朱果")').length > 0) {
             $('div#out > span.out tr').each(function() {
                 var $td = $('td:first', this);
                 var text = $td.text();
@@ -3878,6 +3893,7 @@
                                     for (var i = 0; i < 5; i++) {
                                         cmds.push('ask ' + target[0]);
                                     }
+                                    cmds.push('open jhqx');
                                     clickButton(cmds.join('\n'));
                                 }
                             });
@@ -3900,7 +3916,12 @@
 	window.gSocketMsg2.show_score = function() {
 		_show_score.apply(this, arguments);
         create_button('自动重连', 'lime', function() {
-            execute_cmd('#tr connect');
+            if (!connect_trigger) {
+                execute_cmd('#connect');
+                execute_cmd('#t+ connect');
+            } else {
+                execute_cmd('#t- connect');
+            }
         });
         create_button('回显指令', 'lime', function() {
             execute_cmd('#echo');
